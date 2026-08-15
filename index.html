@@ -290,10 +290,22 @@ body.legacy .levels{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
 
 /* ---------- coloring ---------- */
 .colorwrap{display:flex;flex-direction:column;gap:8px;flex:1;min-height:0}
-.canvasbox{flex:1;min-height:0;border-radius:16px;border:2px solid rgba(255,255,255,.2);background:#fdfdf7;overflow:hidden;display:flex;align-items:center;justify-content:center}
-.canvasbox svg{width:100%;height:100%;touch-action:manipulation}
+.canvasbox{flex:1;min-height:0;border-radius:16px;border:2px solid rgba(255,255,255,.2);background:#fdfdf7;
+  overflow:auto;-webkit-overflow-scrolling:touch;display:flex;align-items:center;justify-content:center;position:relative}
+.canvasbox.zoomed{align-items:flex-start;justify-content:flex-start}
+.canvasbox svg{width:100%;height:100%;touch-action:manipulation;display:block;flex:0 0 auto}
+.canvasbox.zoomed svg{height:auto}
+.zoomrow{display:flex;gap:7px;align-items:center;justify-content:center;padding:2px 0}
+.zoomrow .btn{font-size:9px;padding:9px 12px}
+.zoomrow .zlab{font-family:var(--pix);font-size:8px;color:var(--cyan);min-width:52px;text-align:center;line-height:1.9}
 .canvasbox svg .rg{stroke:#2b2b2b;stroke-width:2.2;cursor:pointer;transition:fill .18s}
-.canvasbox svg .lbl{font-family:var(--pix);font-size:11px;fill:#5a5a5a;pointer-events:none;text-anchor:middle}
+.canvasbox svg .lbl{font-family:var(--pix);font-size:11px;fill:#2f2f2f;pointer-events:none;text-anchor:middle;
+  paint-order:stroke;stroke:#ffffff;stroke-width:3.4px;stroke-linejoin:round;stroke-linecap:round}
+.canvasbox svg .lbl.hide{display:none}
+/* the shapes that match the number he just picked light up, so he never has to hunt */
+.canvasbox svg .rg.hit{stroke:#0a7f31;stroke-width:4;animation:rgpulse .85s ease-in-out infinite}
+@keyframes rgpulse{0%,100%{stroke-opacity:1}50%{stroke-opacity:.28}}
+.canvasbox svg .lbl.hit{fill:#0a7f31;stroke:#ffffff;stroke-width:4px}
 .palette{display:grid;grid-auto-flow:column;grid-template-rows:repeat(2,auto);gap:7px;overflow-x:auto;padding:6px 2px;scrollbar-width:thin}
 .palette::-webkit-scrollbar{height:6px}.palette::-webkit-scrollbar-thumb{background:rgba(61,255,119,.4);border-radius:9px}
 body.dev-laptop .palette{grid-template-rows:repeat(2,auto)}
@@ -759,6 +771,12 @@ body.dev-laptop .scene{height:clamp(200px,34vh,320px)}
     <div class="maphead" id="colorTitle">&#128070; COLOR BY NUMBER</div>
     <div class="colorwrap">
       <div class="canvasbox" id="colorCanvas"></div>
+      <div class="zoomrow">
+        <button class="btn gy" id="zoomOut">&#128269;&#8722;</button>
+        <span class="zlab" id="zoomLab">FIT</span>
+        <button class="btn gy" id="zoomIn">&#128269;&#43;</button>
+        <button class="btn gy" id="zoomFit" style="font-size:8px">FIT</button>
+      </div>
       <div class="palette" id="colorPalette"></div>
       <div id="colorName">TAP A NUMBER, THEN TAP THE SHAPES</div>
       <div class="foot">
@@ -863,6 +881,24 @@ body.dev-laptop .scene{height:clamp(200px,34vh,320px)}
    NOOB-SEBASTIAN  —  Book 1
    ============================================================ */
 'use strict';
+/* ============================================================
+   ONE-TIME FRESH START
+   Bump FRESH_TAG and every gadget wipes itself once, the next time it
+   opens the game. Nothing else clears a save \u2014 normal updates never do.
+   ============================================================ */
+const FRESH_TAG='2026-08-16-clean-slate';
+(function(){
+  try{
+    if(localStorage.getItem('noob-fresh')===FRESH_TAG)return;
+    const keep={'noob-simple-layout':localStorage.getItem('noob-simple-layout')};
+    const kill=[];
+    for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.indexOf('noob-')===0)kill.push(k); }
+    kill.forEach(k=>{try{localStorage.removeItem(k);}catch(e){}});
+    Object.keys(keep).forEach(k=>{ if(keep[k]!=null)try{localStorage.setItem(k,keep[k]);}catch(e){} });
+    localStorage.setItem('noob-fresh',FRESH_TAG);
+  }catch(e){}
+})();
+
 const PKEY='noob-seb-profiles';
 let PROF=loadProfiles();
 function loadProfiles(){
@@ -1675,6 +1711,8 @@ function renderMod(){
   h+='<div class="card" style="margin-top:14px"><div class="pix neon c" style="font-size:10px;line-height:2">QUICK CONTROLS</div>';
   h+='<div class="row" style="margin-top:10px">'+CH.map(x=>'<button class="btn '+(S.unlocked[x.n]?'yl':'gy')+'" data-tog="'+x.n+'" style="font-size:9px;flex:1;min-width:64px">L'+x.n+' '+(S.unlocked[x.n]?'OPEN':'LOCKED')+'</button>').join('')+'</div>';
   h+='<div style="height:14px"></div><label>PASTE A PARENT CODE</label><input id="modPaste" placeholder="NSB-..."><div style="height:8px"></div><button class="btn cy" id="modPasteGo" style="width:100%">APPLY CODE</button>';
+  h+='<div style="height:14px"></div><label>\u{1F9F9} START FRESH <span class="tiny" style="color:#9fb3c8">(wipes every account on this gadget)</span></label>'+
+     '<button class="btn gy" id="modWipe" style="width:100%;font-size:9px">\u{1F9F9} ERASE EVERYTHING ON THIS GADGET</button>';
   h+='<div style="height:14px"></div><label>\u{1F4F1} SCREEN <span class="tiny" style="color:#9fb3c8">(turn this on if a gadget only shows the top of the page)</span></label>'+
      '<button class="btn '+(legacyOn()?'yl':'gy')+'" id="modSimple" style="width:100%;font-size:9px">'+
      (legacyOn()?'\u{1F4F1} SIMPLE LAYOUT IS ON \u2014 TAP TO TURN OFF':'\u{1F4F1} USE THE SIMPLE LAYOUT')+'</button>';
@@ -1780,6 +1818,23 @@ function renderMod(){
     const n=+b.dataset.approve; S.unlocked[n]=true; delete S.pending[n]; save(); toast('LEVEL '+n+' APPROVED ❤️'); renderMod();
   }));
   $('#modPasteGo').addEventListener('click',()=>{const r=applyCode($('#modPaste').value);toast(r?('CODE APPLIED TO LEVEL '+r):'THAT CODE DID NOT WORK');if(r)renderMod();});
+  const mWipe=$('#modWipe');
+  if(mWipe)mWipe.addEventListener('click',()=>{
+    modal('<div class="center"><div style="font-size:38px">\u{1F9F9}</div>'+
+      '<div class="pix neon y" style="font-size:10px;margin:10px 0;line-height:2">ERASE EVERYTHING<br>ON THIS GADGET?</div>'+
+      '<div style="font-size:16px;line-height:1.55">Every account, all coins, badges, rockets, outfits, colouring and arcade scores on <b>this gadget</b> go back to zero.<br><br>'+
+      'Anything saved in the cloud is <b>not</b> touched \u2014 signing back in would bring it down again.</div>'+
+      '<div style="height:14px"></div><button class="btn pk big" id="wipeYes">YES, ERASE IT ALL</button>'+
+      '<div style="height:8px"></div><button class="btn gy" style="width:100%;font-size:9px" onclick="closeModal()">CANCEL</button></div>');
+    $('#wipeYes').addEventListener('click',()=>{
+      try{
+        const kill=[];
+        for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.indexOf('noob-')===0)kill.push(k); }
+        kill.forEach(k=>{try{localStorage.removeItem(k);}catch(e){}});
+      }catch(e){}
+      location.reload();
+    });
+  });
   const mSimple=$('#modSimple');
   if(mSimple)mSimple.addEventListener('click',()=>{
     if(legacyOn()){ leaveLegacy(); toast('BACK TO THE NORMAL LAYOUT'); }
@@ -3063,23 +3118,124 @@ function openColoring(id){
   $('#colorTitle').innerHTML='\u{1F446} '+pg.title+' <span style="color:var(--yellow)">'+pg.diff+'</span>';
   $('#colorCanvas').innerHTML=pg.svg;
   const regs=[...$('#colorCanvas').querySelectorAll('.rg')];
+  /* pair each shape with the little number printed on it (they come out in order) */
+  const labelOf={};
+  (function(){
+    const svg=$('#colorCanvas').querySelector('svg'); if(!svg)return;
+    let last=-1;
+    [...svg.querySelectorAll('.rg,.lbl')].forEach(el=>{
+      if(el.classList.contains('rg')) last=regs.indexOf(el);
+      else if(last>=0 && labelOf[last]===undefined) labelOf[last]=el;
+    });
+  })();
+  const numOf=i=>+(regs[i].getAttribute('data-c')||0);
+  const paintReg=(r,i)=>{ const c=CPAL[COL.sel][0]; r.setAttribute('fill',c); COL.fills[i]=c;
+    S.gallery[id]=COL.fills; save(); beep(520+COL.sel*70,.05);
+    r.classList.remove('hit');
+    if(labelOf[i]){ labelOf[i].classList.add('hide'); }
+    paintCount(); markHits(); };
   regs.forEach((r,i)=>{
     r.dataset.i=i;
-    if(COL.fills[i])r.setAttribute('fill',COL.fills[i]);
-    const paint=()=>{ const c=CPAL[COL.sel][0]; r.setAttribute('fill',c); COL.fills[i]=c;
-      S.gallery[id]=COL.fills; save(); beep(520+COL.sel*70,.05); };
-    r.addEventListener('click',paint);
-    r.addEventListener('pointerenter',e=>{ if(e.pressure>0||e.buttons)paint(); });
+    if(COL.fills[i]){ r.setAttribute('fill',COL.fills[i]); if(labelOf[i])labelOf[i].classList.add('hide'); }
+    r.addEventListener('click',()=>paintReg(r,i));
+    r.addEventListener('pointerenter',e=>{ if(e.pressure>0||e.buttons)paintReg(r,i); });
   });
+  /* light up every shape carrying the chosen number */
+  function markHits(){
+    const want=COL.sel+1;
+    let left=0;
+    regs.forEach((r,i)=>{
+      const on = numOf(i)===want && COL.fills[i]===undefined;
+      r.classList.toggle('hit',on);
+      if(labelOf[i]) labelOf[i].classList.toggle('hit',on);
+      if(on)left++;
+    });
+    const nm=$('#colorName');
+    if(nm) nm.textContent=(COL.sel+1)+' \u2022 '+CPAL[COL.sel][1]+(left?('  \u2014 '+left+' SHAPE'+(left>1?'S':'')+' TO GO'):'  \u2014 ALL DONE');
+  }
+  function paintCount(){
+    const done=Object.keys(COL.fills).length;
+    const el=$('#colorCount'); if(el)el.textContent=done+' / '+regs.length;
+  }
+  /* a near miss still paints: tiny strips are hard for small fingers */
+  const box=$('#colorCanvas');
+  box.onclick=(e)=>{
+    if(e.target&&e.target.classList&&e.target.classList.contains('rg'))return;   /* already handled */
+    let best=null,bestD=1e9;
+    regs.forEach((r,i)=>{
+      const b=r.getBoundingClientRect();
+      if(b.width<=0&&b.height<=0)return;
+      const dx=Math.max(b.left-e.clientX,0,e.clientX-b.right);
+      const dy=Math.max(b.top-e.clientY,0,e.clientY-b.bottom);
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<bestD){bestD=d;best={r:r,i:i};}
+    });
+    if(best&&bestD<=26) paintReg(best.r,best.i);
+  };
+  /* zoom, so the thin strips can be made big enough to hit */
+  COL.zoom=1;
+  const applyZoom=()=>{
+    const svg=box.querySelector('svg'); if(!svg)return;
+    box.classList.toggle('zoomed',COL.zoom>1.001);
+    svg.style.width=(COL.zoom>1.001)?(COL.zoom*100)+'%':'100%';
+    svg.style.height=(COL.zoom>1.001)?'auto':'100%';
+    const lab=$('#zoomLab'); if(lab)lab.textContent=(COL.zoom>1.001)?(Math.round(COL.zoom*100)+'%'):'FIT';
+  };
+  const setZoom=(z,cx,cy)=>{
+    const old=COL.zoom;
+    COL.zoom=Math.max(1,Math.min(6,z));
+    const sw=box.scrollWidth, sh=box.scrollHeight;
+    applyZoom();
+    /* keep roughly the same spot in view */
+    const k=COL.zoom/old;
+    if(isFinite(k)&&k!==1){
+      box.scrollLeft=(box.scrollLeft+(cx==null?box.clientWidth/2:cx))*k-(cx==null?box.clientWidth/2:cx);
+      box.scrollTop =(box.scrollTop +(cy==null?box.clientHeight/2:cy))*k-(cy==null?box.clientHeight/2:cy);
+    }
+  };
+  const zi=$('#zoomIn'), zo=$('#zoomOut'), zf=$('#zoomFit');
+  if(zi)zi.onclick=()=>{setZoom(COL.zoom*1.4);beep(900,.05);};
+  if(zo)zo.onclick=()=>{setZoom(COL.zoom/1.4);beep(700,.05);};
+  if(zf)zf.onclick=()=>{setZoom(1);beep(600,.05);box.scrollTop=0;box.scrollLeft=0;};
+  applyZoom();
   const lum=hex=>{const n=parseInt(hex.slice(1),16);return (0.299*((n>>16)&255)+0.587*((n>>8)&255)+0.114*(n&255))/255;};
   $('#colorPalette').innerHTML=CPAL.map((c,i)=>'<div class="swatch '+(i===0?'on':'')+'" data-p="'+i+'" title="'+c[1]+'" style="background:'+c[0]+'"><b style="color:'+(lum(c[0])>0.55?'#000':'#fff')+'">'+(i+1)+'</b></div>').join('');
   $('#colorPalette').querySelectorAll('.swatch').forEach(sw=>sw.addEventListener('click',()=>{
     COL.sel=+sw.dataset.p; $('#colorPalette').querySelectorAll('.swatch').forEach(x=>x.classList.remove('on')); sw.classList.add('on'); beep(800,.05);
-    $('#colorName').textContent=(COL.sel+1)+' • '+CPAL[COL.sel][1];
+    markHits();
   }));
   const doneCount=Object.keys(COL.fills).length, total=regs.length;
   $('#colorCount').textContent=doneCount+' / '+total;
+  markHits();
   show('s-color');
+  /* nudge the little numbers apart so two of them never sit on top of each other */
+  setTimeout(()=>{
+    try{
+      const svg=$('#colorCanvas').querySelector('svg'); if(!svg)return;
+      const placed=[];
+      const hits=(b)=>placed.some(o=>!(b.x+b.w<=o.x||o.x+o.w<=b.x||b.y+b.h<=o.y||o.y+o.h<=b.y));
+      const tries=[[0,0],[0,-8],[0,8],[-10,0],[10,0],[-10,-8],[10,-8],[-10,8],[10,8],
+                   [0,-15],[0,15],[-18,0],[18,0],[-18,-12],[18,-12],[-18,12],[18,12]];
+      [...svg.querySelectorAll('.lbl')].forEach(t=>{
+        if(t.classList.contains('hide'))return;
+        let bb; try{ bb=t.getBBox(); }catch(e){ return; }
+        if(!bb||!bb.width)return;
+        const pad=1.2;
+        for(let k=0;k<tries.length;k++){
+          const dx=tries[k][0], dy=tries[k][1];
+          const b={x:bb.x+dx-pad,y:bb.y+dy-pad,w:bb.width+pad*2,h:bb.height+pad*2};
+          if(!hits(b)){
+            if(dx||dy){
+              t.setAttribute('x',(parseFloat(t.getAttribute('x')||0)+dx).toFixed(2));
+              t.setAttribute('y',(parseFloat(t.getAttribute('y')||0)+dy).toFixed(2));
+            }
+            placed.push(b); return;
+          }
+        }
+        placed.push({x:bb.x,y:bb.y,w:bb.width,h:bb.height});
+      });
+    }catch(e){}
+  },60);
 }
 $('#colorBack').addEventListener('click',()=>{renderGallery();show('s-gallery');});
 $('#colorClear').addEventListener('click',()=>{const id=COL.id;delete S.gallery[id];save();openColoring(id);});
