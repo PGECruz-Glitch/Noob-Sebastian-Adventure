@@ -3026,7 +3026,14 @@ async function cloudRPC(fn,body){
   if(!res.ok){
     let m=txt; try{const j=JSON.parse(txt); m=j.message||j.hint||j.error||txt;}catch(e){}
     if(res.status===401||res.status===403) m='Key refused ('+res.status+'). Check the Publishable key. ['+m+']';
-    else if(res.status===404) m='The database function "'+fn+'" is missing ('+fn+' 404). Run the SQL again.';
+    else if(res.status===404){
+      if(/digest\s*\(/.test(txt)||/pgcrypto/i.test(txt))
+        m='The database cannot reach pgcrypto. Re-run the SQL in SETUP-CLOUD.md \u2014 the functions need: set search_path = public, extensions';
+      else if(/does not exist|undefined function/i.test(txt))
+        m='"'+fn+'" ran but something inside it failed: '+m;
+      else
+        m='The database cannot see "'+fn+'" (404). Run the SQL again, then: notify pgrst, \'reload schema\';';
+    }
     else m='HTTP '+res.status+': '+m;
     throw new Error(m);
   }
