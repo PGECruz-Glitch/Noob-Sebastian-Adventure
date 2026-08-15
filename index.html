@@ -1558,25 +1558,37 @@ function unlockNow(n){
    PIN + MODERATOR MODE
    ============================================================ */
 function askPin(cb){
-  let pin='';
-  const draw=()=>{
-    modal('<div class="center"><div class="pix neon c" style="font-size:11px;line-height:2">GROWN-UP PIN</div>'+
-      '<div class="pindots" id="pd">'+'●'.repeat(pin.length)+'</div><div style="height:8px"></div>'+
-      '<div class="pinpad">'+[1,2,3,4,5,6,7,8,9].map(d=>'<button class="btn gy" data-d="'+d+'">'+d+'</button>').join('')+
-      '<button class="btn gy" data-d="del">←</button><button class="btn gy" data-d="0">0</button><button class="btn" data-d="ok">OK</button></div>'+
-      '<div style="height:12px"></div><button class="btn gy" style="font-size:9px" onclick="closeModal()">CANCEL</button></div>');
-    $('#modalCard').querySelectorAll('[data-d]').forEach(b=>b.addEventListener('click',()=>{
-      const d=b.dataset.d; beep(700,.05);
-      if(d==='del')pin=pin.slice(0,-1);
-      else if(d==='ok'){
-        if(pin===(S.mod.pin||DEFAULT_PIN)){closeModal();cb();}
-        else{beep(140,.3,'sawtooth',.07);pin='';draw();toast('WRONG PIN',1400);}
-        return;
-      } else if(pin.length<8) pin+=d;
-      $('#pd').textContent='●'.repeat(pin.length);
-    }));
+  const want=String(S.mod.pin||DEFAULT_PIN);
+  modal('<div class="center"><div class="pix neon c" style="font-size:11px;line-height:2">GROWN-UP PIN</div>'+
+    '<div class="tiny" style="margin:6px 0 10px">Numbers, letters, or both.</div>'+
+    '<div class="modwrap"><input id="pinIn" type="password" inputmode="text" autocapitalize="none" '+
+      'autocorrect="off" autocomplete="off" spellcheck="false" placeholder="PIN or password" maxlength="32"></div>'+
+    '<div style="height:6px"></div><button class="btn gy" id="pinEye" style="font-size:9px">\u{1F441}\u{FE0F} SHOW</button>'+
+    '<div style="height:10px"></div>'+
+    '<div class="pinpad">'+[1,2,3,4,5,6,7,8,9].map(d=>'<button class="btn gy" data-d="'+d+'">'+d+'</button>').join('')+
+    '<button class="btn gy" data-d="del">\u2190</button><button class="btn gy" data-d="0">0</button>'+
+    '<button class="btn" data-d="ok">OK</button></div>'+
+    '<div style="height:12px"></div><button class="btn gy" style="font-size:9px" onclick="closeModal()">CANCEL</button></div>');
+  const inp=$('#pinIn');
+  const tryIt=()=>{
+    const v=(inp.value||'').trim();
+    if(v===want || v.toLowerCase()===want.toLowerCase()){ closeModal(); cb(); }
+    else { beep(140,.3,'sawtooth',.07); inp.value=''; inp.focus(); toast('WRONG PIN',1400); }
   };
-  draw();
+  $('#pinEye').addEventListener('click',()=>{
+    const showing=inp.type==='text';
+    inp.type=showing?'password':'text';
+    $('#pinEye').innerHTML=showing?'\u{1F441}\u{FE0F} SHOW':'\u{1F648} HIDE';
+    inp.focus();
+  });
+  inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();tryIt();} });
+  $('#modalCard').querySelectorAll('[data-d]').forEach(b=>b.addEventListener('click',()=>{
+    const d=b.dataset.d; beep(700,.05);
+    if(d==='del') inp.value=inp.value.slice(0,-1);
+    else if(d==='ok'){ tryIt(); return; }
+    else if(inp.value.length<32) inp.value+=d;
+  }));
+  setTimeout(()=>{try{inp.focus();}catch(e){}},80);
 }
 
 function b64enc(o){return 'NSB-'+btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
@@ -1672,7 +1684,7 @@ function renderMod(){
      '<div id="saveOut"></div>'+
      '<div style="height:10px"></div><button class="btn gy" id="modNewPlayer" style="width:100%;font-size:9px">\u{1F464} START A BRAND NEW PLAYER</button>'+
      '<div class="tiny" style="margin-top:6px">Use BACK UP before switching him between the iPad and the Anbernic — each device has its own save.</div>';
-  h+='<div style="height:14px"></div><label>CHANGE PIN</label><input id="modPin" value="'+esc(S.mod.pin||DEFAULT_PIN)+'" inputmode="numeric"><div style="height:8px"></div><button class="btn" id="modPinGo" style="width:100%">SAVE PIN</button>';
+  h+='<div style="height:14px"></div><label>CHANGE PIN <span class="tiny" style="color:#9fb3c8">(numbers, letters or both \u2014 at least 3)</span></label><input id="modPin" value="'+esc(S.mod.pin||DEFAULT_PIN)+'" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="32"><div style="height:8px"></div><button class="btn" id="modPinGo" style="width:100%">SAVE PIN</button>';
   h+='</div>';
 
   h+='<div class="card" style="margin-top:14px"><div class="pix neon" style="font-size:10px;line-height:2">HIS PROGRESS</div>'+
