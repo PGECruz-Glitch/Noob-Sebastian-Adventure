@@ -68,6 +68,19 @@ body.grey #bg{filter:grayscale(1) brightness(.6)}
 .scroller{flex:0 1 auto;max-height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:6px 2px 14px;min-height:0}
 .scroller::-webkit-scrollbar{width:6px}
 .scroller::-webkit-scrollbar-thumb{background:rgba(61,255,119,.4);border-radius:9px}
+/* ---------- SIMPLE LAYOUT ----------
+   Older browsers (handhelds like the Anbernic) collapse a flex column whose child
+   uses max-height:100%, so the page header shows and the body has zero height.
+   This turns the whole app into an ordinary scrolling page instead. ---------- */
+html.legacy,body.legacy{height:auto!important;min-height:100%;overflow:auto!important;overflow-x:hidden!important}
+body.legacy #app{height:auto!important;min-height:100%;display:block!important;overflow:visible!important}
+body.legacy #hud{display:flex!important;flex-wrap:wrap;width:100%;max-width:820px;margin:0 auto}
+body.legacy .screen{display:none}
+body.legacy .screen.on{display:block!important;height:auto!important;max-width:820px;margin:0 auto}
+body.legacy .scroller{max-height:none!important;height:auto!important;overflow:visible!important;flex:none!important}
+body.legacy .foot{padding-bottom:16px}
+body.legacy #bg{position:fixed}
+body.legacy .levels{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
 
 /* ---------- shared bits ---------- */
 .pix{font-family:var(--pix);letter-spacing:.02em;line-height:1.7}
@@ -1614,6 +1627,9 @@ function renderMod(){
   h+='<div class="card" style="margin-top:14px"><div class="pix neon c" style="font-size:10px;line-height:2">QUICK CONTROLS</div>';
   h+='<div class="row" style="margin-top:10px">'+CH.map(x=>'<button class="btn '+(S.unlocked[x.n]?'yl':'gy')+'" data-tog="'+x.n+'" style="font-size:9px;flex:1;min-width:64px">L'+x.n+' '+(S.unlocked[x.n]?'OPEN':'LOCKED')+'</button>').join('')+'</div>';
   h+='<div style="height:14px"></div><label>PASTE A PARENT CODE</label><input id="modPaste" placeholder="NSB-..."><div style="height:8px"></div><button class="btn cy" id="modPasteGo" style="width:100%">APPLY CODE</button>';
+  h+='<div style="height:14px"></div><label>\u{1F4F1} SCREEN <span class="tiny" style="color:#9fb3c8">(turn this on if a gadget only shows the top of the page)</span></label>'+
+     '<button class="btn '+(legacyOn()?'yl':'gy')+'" id="modSimple" style="width:100%;font-size:9px">'+
+     (legacyOn()?'\u{1F4F1} SIMPLE LAYOUT IS ON \u2014 TAP TO TURN OFF':'\u{1F4F1} USE THE SIMPLE LAYOUT')+'</button>';
   const cc=cloudCfg();
   h+='<div style="height:16px"></div><div style="border-top:1px solid rgba(255,255,255,.15);padding-top:12px"></div>'+
      '<label>\u{1F52E} THE GAME MASTER <span class="tiny" style="color:#9fb3c8">(comments on his page &mdash; he never finds out it is you)</span></label>'+
@@ -1695,6 +1711,12 @@ function renderMod(){
     const n=+b.dataset.approve; S.unlocked[n]=true; delete S.pending[n]; save(); toast('LEVEL '+n+' APPROVED ❤️'); renderMod();
   }));
   $('#modPasteGo').addEventListener('click',()=>{const r=applyCode($('#modPaste').value);toast(r?('CODE APPLIED TO LEVEL '+r):'THAT CODE DID NOT WORK');if(r)renderMod();});
+  const mSimple=$('#modSimple');
+  if(mSimple)mSimple.addEventListener('click',()=>{
+    if(legacyOn()){ leaveLegacy(); toast('BACK TO THE NORMAL LAYOUT'); }
+    else { goLegacy(false); toast('\u{1F4F1} SIMPLE LAYOUT ON \u2014 JUST SCROLL THE PAGE',2800); }
+    renderMod();
+  });
   function gmModPaint(){
     const el=$('#gmModList'); if(!el)return;
     if(!GM.list.length){el.innerHTML='<span class="tiny">No comments yet. Post one first — he will see the badge on his map.</span>';return;}
@@ -4998,6 +5020,34 @@ function setVH(){
   const h=(window.visualViewport&&window.visualViewport.height)||window.innerHeight;
   document.documentElement.style.setProperty('--appvh',h+'px');
 }
+/* ---- simple layout: rescue for browsers that collapse the flex column ---- */
+const LEGKEY='noob-simple-layout';
+function legacyOn(){ return document.body.classList.contains('legacy'); }
+function goLegacy(say){
+  if(legacyOn())return;
+  document.documentElement.classList.add('legacy');
+  document.body.classList.add('legacy');
+  try{localStorage.setItem(LEGKEY,'1');}catch(e){}
+  if(say)try{toast('\u{1F4F1} SIMPLE LAYOUT ON \u2014 JUST SCROLL THE PAGE',3000);}catch(e){}
+}
+function leaveLegacy(){
+  document.documentElement.classList.remove('legacy');
+  document.body.classList.remove('legacy');
+  try{localStorage.removeItem(LEGKEY);}catch(e){}
+}
+function legacyGuard(){
+  if(legacyOn())return;
+  const sc=$('.screen.on'); if(!sc)return;
+  if(sc.getBoundingClientRect().height<60){ goLegacy(true); return; }
+  const box=sc.querySelector('.scroller'); if(!box)return;
+  if(box.scrollHeight>24 && box.clientHeight<48) goLegacy(true);
+}
+try{
+  if(localStorage.getItem(LEGKEY)==='1') goLegacy(false);
+}catch(e){}
+if(/[#?&]simple/i.test(location.hash+location.search)) goLegacy(false);
+if(/[#?&]normal/i.test(location.hash+location.search)) leaveLegacy();
+
 let fitT=null;
 function fit(){
   setVH(); deviceClass();
@@ -5006,6 +5056,7 @@ function fit(){
     /* if a screen still overflows, shrink it a touch rather than hiding content */
     $$('.screen').forEach(sc=>{ sc.style.removeProperty('font-size'); });
     const sc=$('.screen.on'); if(!sc)return;
+    legacyGuard();
     const box=sc.querySelector('.scroller'); if(!box)return;
     const over=box.scrollHeight-box.clientHeight;
     sc.dataset.over = over>4 ? '1':'0';
