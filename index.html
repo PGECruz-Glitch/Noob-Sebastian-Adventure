@@ -1690,11 +1690,19 @@ function renderMod(){
        : '<div class="tiny">He has to be signed in to the cloud first (home page → ☁️ PLAY ON ANY GADGET). The comments use his account name and PIN.</div>');
   const reps=Object.keys(S.replays||{});
   h+='<div style="height:16px"></div><div style="border-top:1px solid rgba(255,255,255,.15);padding-top:12px"></div>'+
-     '<label>\u{1F3AC} EPISODE RECORDING <span class="tiny" style="color:#9fb3c8">(his real playthrough, for the YouTube cut)</span></label>'+
+     '<label>\u{1F3AC} EPISODE RECORDING <span class="tiny" style="color:#9fb3c8">(a real playthrough, for the YouTube cut)</span></label>'+
+     '<div class="tiny" style="margin-bottom:6px">Only film this account:</div>'+
+     '<div class="row">'+
+       '<button class="btn '+(recWho()?'gy':'yl')+'" data-recwho="" style="flex:1;font-size:8px">EVERYONE</button>'+
+       PROF.list.map(pr=>'<button class="btn '+(recWho()===pr.id?'yl':'gy')+'" data-recwho="'+pr.id+'" style="flex:1;font-size:8px">'+pr.emoji+' '+esc(pr.name)+'</button>').join('')+
+     '</div>'+
+     '<div class="tiny" style="margin-top:5px">This gadget is playing as <b>'+me().emoji+' '+esc(me().name)+'</b>'+(recAllowed()?' \u2014 being filmed.':' \u2014 <span style="color:#ffd93d">not being filmed.</span>')+'</div>'+
+     '<div style="height:10px"></div>'+
      (reps.length
-       ? '<div class="tiny">Captured: '+reps.map(k=>'Chapter '+k+' — '+Math.round((S.replays[k].secs||0)/60*10)/10+' min, '+(S.replays[k].runs||[]).length+' runs').join('<br>')+'<br>Size: '+replaySize()+' KB</div>'+
-         '<div style="height:8px"></div><div class="row">'+reps.map(k=>'<button class="btn cy" data-ep="'+k+'" style="flex:1;font-size:9px">\u{1F3AC} EPISODE '+k+'</button>').join('')+'</div>'
-       : '<div class="tiny">Nothing recorded yet. It captures automatically the next time he finishes a chapter.</div>')+
+       ? '<div class="tiny">Captured: '+reps.map(k=>'Chapter '+k+' \u2014 <b>'+esc(S.replays[k].player||'?')+'</b>, '+Math.round((S.replays[k].secs||0)/60*10)/10+' min, '+(S.replays[k].runs||[]).length+' runs').join('<br>')+'<br>Size: '+replaySize()+' KB</div>'+
+         '<div style="height:8px"></div><div class="row">'+reps.map(k=>'<button class="btn cy" data-ep="'+k+'" style="flex:1;font-size:9px">\u{1F3AC} EPISODE '+k+'</button>').join('')+'</div>'+
+         '<div style="height:8px"></div><div class="row">'+reps.map(k=>'<button class="btn gy" data-epdel="'+k+'" style="flex:1;font-size:8px">\u{1F5D1}\uFE0F DELETE '+k+'</button>').join('')+'</div>'
+       : '<div class="tiny">Nothing recorded yet. It captures automatically the next time a filmed account finishes a chapter.</div>')+
      '<div id="epOut"></div>';
   h+='<div style="height:16px"></div><div style="border-top:1px solid rgba(255,255,255,.15);padding-top:12px"></div>'+
      '<label>\u{2601}\u{FE0F} CLOUD SAVE <span class="tiny" style="color:#9fb3c8">(so his progress follows the account, not the gadget)</span></label>'+
@@ -1813,6 +1821,22 @@ function renderMod(){
   });
   const gmR=$('#gmModRefresh');
   if(gmR)gmR.addEventListener('click',()=>{ gmLoad(true).then(gmModPaint); });
+  $('#modBody').querySelectorAll('[data-recwho]').forEach(bt=>bt.addEventListener('click',()=>{
+    PROF.recWho=bt.dataset.recwho||''; saveProfiles();
+    toast(PROF.recWho?('\u{1F3AC} ONLY '+((PROF.list.find(x=>x.id===PROF.recWho)||{}).name||'?')+' GETS FILMED'):'\u{1F3AC} EVERYONE GETS FILMED');
+    renderMod();
+  }));
+  $('#modBody').querySelectorAll('[data-epdel]').forEach(bt=>bt.addEventListener('click',()=>{
+    const k=bt.dataset.epdel, rp=(S.replays||{})[k]||{};
+    modal('<div class="center"><div style="font-size:38px">\u{1F5D1}\uFE0F</div>'+
+      '<div class="pix neon y" style="font-size:10px;margin:10px 0;line-height:2">DELETE THE CHAPTER '+esc(k)+' RECORDING?</div>'+
+      '<div style="font-size:16px;line-height:1.5">Played by <b>'+esc(rp.player||'?')+'</b>, '+Math.round((rp.secs||0)/60*10)/10+' minutes.</div>'+
+      '<div style="height:14px"></div><button class="btn pk big" id="epDelYes">DELETE IT</button>'+
+      '<div style="height:8px"></div><button class="btn gy" style="width:100%;font-size:9px" onclick="closeModal()">KEEP IT</button></div>');
+    $('#epDelYes').addEventListener('click',()=>{
+      delete S.replays[k]; save(); closeModal(); toast('RECORDING DELETED'); renderMod();
+    });
+  }));
   $('#modBody').querySelectorAll('[data-ep]').forEach(bt=>bt.addEventListener('click',()=>{
     const code=episodeCode(bt.dataset.ep);
     if(!code){toast('NOTHING RECORDED FOR THAT CHAPTER');return;}
@@ -2378,8 +2402,12 @@ function gmPoll(){
    ============================================================ */
 const REC={on:false,ch:0,t0:0,ev:[],run:null,runs:[],lastSample:0};
 function recNow(){ return Math.round((Date.now()-REC.t0)/10)/100; }   /* seconds, 2dp */
+function recWho(){ return (PROF&&PROF.recWho)||''; }
+function recAllowed(){ const w=recWho(); return !w || w===PROF.active; }
 function recStart(ch){
-  REC.on=true; REC.ch=ch; REC.t0=Date.now(); REC.ev=[]; REC.runs=[]; REC.run=null;
+  REC.on=false; REC.ch=ch; REC.ev=[]; REC.runs=[]; REC.run=null;
+  if(!recAllowed())return;                 /* this account is not the one being filmed */
+  REC.on=true; REC.t0=Date.now();
   recEv('start',{player:me().name,cube:(S.dress&&S.dress.c1)||S.cube.color});
 }
 function recEv(k,d){ if(!REC.on)return; REC.ev.push(Object.assign({t:recNow(),k:k},d||{})); if(REC.ev.length>900)REC.ev.shift(); }
