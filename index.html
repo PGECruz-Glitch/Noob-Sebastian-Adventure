@@ -1681,6 +1681,14 @@ function renderMod(){
   const cc=cloudCfg();
   h+='<div style="height:16px"></div><div style="border-top:1px solid rgba(255,255,255,.15);padding-top:12px"></div>'+
      '<label>\u{1F52E} THE GAME MASTER <span class="tiny" style="color:#9fb3c8">(comments on his page &mdash; he never finds out it is you)</span></label>'+
+     '<div class="tiny" style="margin-bottom:6px">Whose page are you commenting on?'+
+       (gmBoxIsOverride()?' Currently <b>'+esc(PROF.gmBox.id.toUpperCase())+'</b> \u2014 comments only, his progress is not touched.':' Currently this gadget\u2019s own account.')+'</div>'+
+     '<div class="row"><input id="gmBoxName" value="'+esc(gmBoxIsOverride()?PROF.gmBox.id:'')+'" placeholder="his account name" autocapitalize="none" style="flex:1">'+
+     '<input id="gmBoxPin" type="password" value="'+esc(gmBoxIsOverride()?PROF.gmBox.pin:'')+'" placeholder="his PIN" autocapitalize="none" style="flex:1"></div>'+
+     '<div style="height:8px"></div><div class="row">'+
+       '<button class="btn cy" id="gmBoxSave" style="flex:1;font-size:9px">\u{1F4BE} USE THIS PAGE</button>'+
+       (gmBoxIsOverride()?'<button class="btn gy" id="gmBoxClear" style="flex:1;font-size:9px">USE MY OWN</button>':'')+
+     '</div><div style="height:10px"></div>'+
      (gmReady()
        ? '<div id="gmModList" class="tiny">Loading his comments…</div>'+
          '<div style="height:8px"></div><textarea id="gmModIn" placeholder="Leave a comment as the Game Master…"></textarea>'+
@@ -1711,7 +1719,12 @@ function renderMod(){
      '<div style="height:8px"></div><div class="row"><button class="btn cy" id="modCloudSave" style="flex:1;font-size:9px">\u{1F4BE} SAVE</button>'+
      '<button class="btn" id="modCloudTest" style="flex:1;font-size:9px">\u{1F50C} TEST IT</button></div>'+
      '<div class="tiny" style="margin-top:5px">Follow SETUP-CLOUD.md once. The anon key is safe to publish — the database only exposes two guarded functions.</div>'+
-     '<div id="cloudTestOut"></div>';
+     '<div id="cloudTestOut"></div>'+
+     '<div style="height:12px"></div><label>\u{1F517} SIGN-IN LINK <span class="tiny" style="color:#9fb3c8">(for a gadget where tapping or typing is awkward)</span></label>'+
+     '<div class="row"><input id="lnkName" placeholder="account name" autocapitalize="none" style="flex:1">'+
+     '<input id="lnkPin" placeholder="PIN" autocapitalize="none" style="flex:1"></div>'+
+     '<div style="height:8px"></div><button class="btn cy" id="lnkGo" style="width:100%;font-size:9px">\u{1F517} MAKE THE LINK</button>'+
+     '<div id="lnkOut"></div>';
   h+='<div style="height:16px"></div><div style="border-top:1px solid rgba(255,255,255,.15);padding-top:12px"></div>'+
      '<label>\u{1F92B} THE SECRET <span class="tiny" style="color:#9fb3c8">(shows a live countdown on his map)</span></label>'+
      '<input id="modSecAt" type="datetime-local" value="'+esc(localISO(secretCfg().at))+'">'+
@@ -1812,6 +1825,22 @@ function renderMod(){
     });
   }
   if(gmReady()){ gmLoad(true).then(gmModPaint); }
+  const bxS=$('#gmBoxSave');
+  if(bxS)bxS.addEventListener('click',async()=>{
+    const n=($('#gmBoxName').value||'').trim().toLowerCase().replace(/[^a-z0-9_-]/g,'');
+    const pn=($('#gmBoxPin').value||'').trim();
+    if(n.length<2||pn.length<4){ toast('NEED HIS ACCOUNT NAME AND PIN'); return; }
+    PROF.gmBox={id:n,pin:pn}; saveProfiles();
+    GM.list=[]; GM.unread=0;
+    await gmLoad(false);
+    if(GM.list.length||gmReady()) toast('\u{1F52E} NOW ON '+n.toUpperCase()+'\u2019S PAGE',2600);
+    renderMod();
+  });
+  const bxC=$('#gmBoxClear');
+  if(bxC)bxC.addEventListener('click',async()=>{
+    delete PROF.gmBox; saveProfiles(); GM.list=[]; GM.unread=0;
+    await gmLoad(true); toast('BACK TO THIS GADGET\u2019S OWN PAGE'); renderMod();
+  });
   const gmS=$('#gmModSend');
   if(gmS)gmS.addEventListener('click',async()=>{
     const t=($('#gmModIn').value||'').trim(); if(!t){toast('WRITE SOMETHING FIRST');return;}
@@ -1864,6 +1893,25 @@ function renderMod(){
     }catch(e){
       $('#cloudTestOut').innerHTML='<div class="tiny" style="margin-top:8px;color:#ff8a8a">❌ '+esc(e.message)+'</div>';
     }
+  });
+  const lnk=$('#lnkGo');
+  if(lnk)lnk.addEventListener('click',()=>{
+    const n=($('#lnkName').value||'').trim().toLowerCase().replace(/[^a-z0-9_-]/g,'');
+    const pn=($('#lnkPin').value||'').trim();
+    if(n.length<2||pn.length<4){ toast('NEED A NAME AND A PIN OF 4 OR MORE'); return; }
+    const base=location.href.split('#')[0].split('?')[0];
+    const url=base+'#login='+n+':'+encodeURIComponent(pn);
+    $('#lnkOut').innerHTML='<div style="height:10px"></div><div class="tiny">Open this on the other gadget and it signs itself in \u2014 no tapping, no typing a PIN. Then it cleans itself out of the address.</div>'+
+      '<div style="height:8px"></div><div class="codebox" style="word-break:break-all">'+esc(url)+'</div>'+
+      '<div style="height:8px"></div><div class="row"><button class="btn cy" id="lnkCopy" style="flex:1;font-size:9px">\u{1F4CB} COPY THE LINK</button>'+
+      '<button class="btn gy" id="lnkShort" style="flex:1;font-size:9px">SHOW JUST THE ENDING</button></div>';
+    $('#lnkCopy').addEventListener('click',()=>{try{navigator.clipboard.writeText(url);toast('LINK COPIED');}catch(e){toast('SELECT IT AND COPY',2400);}});
+    $('#lnkShort').addEventListener('click',()=>{
+      modal('<div class="center"><div class="pix neon c" style="font-size:10px;line-height:2">TYPE THIS AT THE END<br>OF THE ADDRESS</div>'+
+        '<div style="height:10px"></div><div class="codebox" style="font-size:18px;word-break:break-all">#login='+esc(n)+':'+esc(pn)+'</div>'+
+        '<div class="tiny" style="margin-top:8px">Add it right after the address of the game and press go.</div>'+
+        '<div style="height:12px"></div><button class="btn big" onclick="closeModal()">OK</button></div>');
+    });
   });
   $('#modSecSave').addEventListener('click',()=>{
     const v=$('#modSecAt').value;
@@ -2198,10 +2246,20 @@ function gmSVG(size){
     '<circle cx="50" cy="6" r="4" fill="#3dff77"/></svg>';
 }
 async function gmCall(fn,body){ return cloudRPC(fn,body); }
-function gmReady(){ return !!(cloudIdent()&&cloudReady()); }
+/* Which account's comment page are we on?
+   Normally it is this gadget's own cloud account. A grown-up can point it at the
+   child's account instead (Moderator \u2192 THE GAME MASTER \u2192 WHOSE PAGE), which reads and
+   writes only the comments \u2014 it never syncs this gadget's progress into that account. */
+function gmIdent(){
+  const g=(typeof PROF!=='undefined')&&PROF.gmBox;
+  if(g&&g.id&&g.pin) return {id:g.id,pin:g.pin};
+  return cloudIdent();
+}
+function gmBoxIsOverride(){ const g=(typeof PROF!=='undefined')&&PROF.gmBox; return !!(g&&g.id&&g.pin); }
+function gmReady(){ return !!(gmIdent()&&cloudReady()); }
 async function gmLoad(silent){
   if(!gmReady()){GM.list=[];GM.unread=0;return;}
-  const id=cloudIdent();
+  const id=gmIdent();
   GM.loading=true;
   try{
     const rows=await gmCall('msg_list',{p_box:id.id,p_pin:id.pin});
@@ -2220,22 +2278,22 @@ function gmBadge(){
   if(!GM.unread)GM._dinged=false;
 }
 async function gmSend(who,body){
-  const id=cloudIdent(); if(!id)return false;
+  const id=gmIdent(); if(!id)return false;
   try{ await gmCall('msg_send',{p_box:id.id,p_pin:id.pin,p_who:who,p_body:body}); await gmLoad(true); return true; }
   catch(e){ toast('MESSAGE DID NOT SEND:<br>'+esc(e.message),3000); return false; }
 }
 async function gmDel(id){
-  const ident=cloudIdent(); if(!ident)return false;
+  const ident=gmIdent(); if(!ident)return false;
   try{ await gmCall('msg_del',{p_box:ident.id,p_pin:ident.pin,p_msg:Number(id)}); await gmLoad(true); return true; }
   catch(e){ toast('COULD NOT DELETE:<br>'+esc(e.message),3000); return false; }
 }
 async function gmClear(){
-  const ident=cloudIdent(); if(!ident)return false;
+  const ident=gmIdent(); if(!ident)return false;
   try{ await gmCall('msg_clear',{p_box:ident.id,p_pin:ident.pin}); await gmLoad(true); return true; }
   catch(e){ toast('COULD NOT CLEAR:<br>'+esc(e.message),3000); return false; }
 }
 async function gmMarkSeen(){
-  const id=cloudIdent(); if(!id||!GM.unread)return;
+  const id=gmIdent(); if(!id||!GM.unread)return;
   try{ await gmCall('msg_seen',{p_box:id.id,p_pin:id.pin,p_who:'gm'}); GM.unread=0; gmBadge(); }catch(e){}
 }
 function gmTime(iso){
@@ -2287,8 +2345,12 @@ function renderMail(){
       '<div style="font-size:17px;line-height:1.6;margin-top:10px">The Game Master can only comment once you have signed in on the home page.<br><br>Tap <b>\u{2601}\u{FE0F} PLAY ON ANY GADGET</b> and pick your name.</div></div>';
     return;
   }
-  const nm=(me().name||'SEBASTIAN').toUpperCase();
-  const handle='@'+(me().name||'sebastian').toLowerCase().replace(/[^a-z0-9]/g,'');
+  /* the comments belong to the CLOUD account, not to whatever profile this gadget
+     happens to be playing as \u2014 otherwise Daddy's name shows on Sebastian's page */
+  const ident=gmIdent();
+  const acct=String((ident&&ident.id)||me().name||'sebastian');
+  const nm=acct.toUpperCase();
+  const handle='@'+acct.toLowerCase().replace(/[^a-z0-9]/g,'');
   const ch=CH.find(c=>!S.done[c.n])||CH[0];
   const views=1200+(S.coinsEver||0)*3+(S.stars||0)*250+(S.subs||0)*47;
   let h='';
@@ -5111,6 +5173,7 @@ $('#btnArcade').addEventListener('click',()=>{renderArcade();show('s-arcade');})
 $('#btnExams').addEventListener('click',()=>{renderExams('map');show('s-exams');});
 $('#btnChars').addEventListener('click',()=>{renderChars();show('s-chars');});
 $('#gmMapBtn').addEventListener('click',()=>{renderMail();show('s-mail');gmLoad(true).then(()=>{if($('#s-mail').classList.contains('on'))renderMail();});});
+$('#cloudChip').addEventListener('click',()=>{try{cloudSignInFlow();}catch(e){}});
 $('#gmChip').addEventListener('click',()=>{renderMail();show('s-mail');gmLoad(true).then(()=>{if($('#s-mail').classList.contains('on'))renderMail();});});
 $('#mailBack').addEventListener('click',()=>{show('s-map');renderMap();});
 $('#charsBack').addEventListener('click',()=>{show('s-map');renderMap();});
@@ -5214,6 +5277,23 @@ if(!fsSupported()){ $('#btnFS').style.display='none'; $('#btnFS2').style.display
 (function(){
   const hash=location.hash.replace(/^#/,'');
   if(hash && /^NSB-/i.test(hash)){ const r=applyCode(hash); if(r)setTimeout(()=>toast('\u{1F511} KEY LOADED FOR LEVEL '+r,3000),600); }
+})();
+/* Sign in straight from the address, for gadgets where tapping or typing is hard:
+     ...index.html#login=sebastian:2510                                            */
+(function(){
+  const src=(location.hash||'')+'&'+(location.search||'');
+  const m=src.match(/[#?&]login=([a-z0-9_-]{2,32})[:%](?:3A)?([^&#]{4,32})/i);
+  if(!m)return;
+  const id=m[1], pin=decodeURIComponent(m[2]);
+  setTimeout(async()=>{
+    try{
+      if(!cloudReady()){ toast('CLOUD IS NOT SET UP YET',3000); return; }
+      const okd=await cloudSignIn(id,pin,true);
+      toast(okd?('\u{2601}\u{FE0F} SIGNED IN AS '+id.toUpperCase()):'THAT SIGN-IN LINK DID NOT WORK',3200);
+      renderHome();
+      try{ history.replaceState(null,'',location.pathname); }catch(e){ location.hash=''; }
+    }catch(e){ toast('SIGN-IN LINK FAILED:<br>'+esc(e.message),3400); }
+  },900);
 })();
 renderHome(); show('s-home');
 hud();
