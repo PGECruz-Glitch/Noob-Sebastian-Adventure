@@ -593,6 +593,42 @@ body.dev-laptop .scene{height:clamp(200px,34vh,320px)}
 </style>
 </head>
 <body>
+<div id="oldbrowser" style="display:none;position:fixed;left:0;right:0;top:0;z-index:99999;background:#2a0b0b;color:#ffd9d9;font:13px/1.5 monospace;padding:12px 14px;border-bottom:3px solid #ff5555;max-height:52%;overflow:auto">
+  <b style="color:#ff8a8a">THIS GADGET'S BROWSER HIT A PROBLEM</b><br>
+  <span id="oberr"></span><br><br>
+  <span style="color:#ffd93d">Show this to Daddy. The game needs a newer browser on this gadget,
+  or try the simple layout by adding <b>#simple</b> to the end of the address.</span>
+  <div style="margin-top:8px"><button onclick="document.getElementById('oldbrowser').style.display='none'"
+    style="background:#552020;color:#ffd9d9;border:1px solid #ff8a8a;border-radius:6px;padding:6px 12px;font:12px monospace">CLOSE</button></div>
+</div>
+<script>
+/* deliberately old-style JavaScript: this must run even on ancient browsers */
+(function(){
+  var shown=false;
+  function show(msg){
+    if(shown)return; shown=true;
+    try{
+      var b=document.getElementById('oldbrowser');
+      var e=document.getElementById('oberr');
+      if(e)e.innerHTML=String(msg).replace(/</g,'&lt;');
+      if(b)b.style.display='block';
+    }catch(x){}
+  }
+  window.addEventListener('error',function(ev){
+    /* ignore failed images/fonts/scripts \u2014 only real script errors matter here */
+    if(!ev||!ev.message)return;
+    if(ev.target&&ev.target!==window)return;
+    var m=ev.message;
+    if(ev.lineno)m+=' \u2014 line '+ev.lineno;
+    show(m);
+  },true);
+  window.__ok=false;
+  setTimeout(function(){
+    if(!window.__ok) show('The game did not finish loading. (No error was reported \u2014 the browser may be too old for it.)');
+  },6000);
+})();
+</script>
+
 <div id="bg"><div class="grid"></div><div class="glow"></div><div class="stars" id="stars"></div></div>
 <div class="biscuit" id="biscuit" title="Biscuit">🐱</div>
 <div id="app">
@@ -1734,9 +1770,38 @@ function renderMod(){
     if(!GM.list.length){el.innerHTML='<span class="tiny">No comments yet. Post one first — he will see the badge on his map.</span>';return;}
     el.innerHTML='<div class="chatwrap" style="max-height:210px">'+GM.list.slice(-40).map(m=>
       '<div class="bubble '+(m.who==='kid'?'me':'gm')+'" style="max-width:92%"><div class="bwho">'+
-      (m.who==='kid'?'SEBASTIAN':'YOU (GAME MASTER)')+' &bull; '+gmTime(m.at)+'</div><div class="btxt">'+
-      esc(m.body).replace(/\n/g,'<br>')+'</div></div>').join('')+'</div>';
+      (m.who==='kid'?'SEBASTIAN':'YOU (GAME MASTER)')+' &bull; '+gmTime(m.at)+
+      ' <span data-gmdel="'+m.id+'" style="cursor:pointer;color:#ff8a8a;float:right;font-size:11px" title="Delete this comment">\u2716</span>'+
+      '</div><div class="btxt">'+
+      esc(m.body).replace(/\n/g,'<br>')+'</div></div>').join('')+'</div>'+
+      '<div style="height:8px"></div><button class="btn gy" id="gmWipe" style="width:100%;font-size:9px">\u{1F5D1}\uFE0F DELETE EVERY COMMENT</button>';
     const w=el.querySelector('.chatwrap'); if(w)w.scrollTop=w.scrollHeight;
+    el.querySelectorAll('[data-gmdel]').forEach(x=>x.addEventListener('click',async()=>{
+      const id=x.dataset.gmdel;
+      const m=GM.list.find(y=>String(y.id)===String(id));
+      modal('<div class="center"><div style="font-size:38px">\u{1F5D1}\uFE0F</div>'+
+        '<div class="pix neon y" style="font-size:10px;margin:10px 0;line-height:2">DELETE THIS COMMENT?</div>'+
+        '<div style="font-size:16px;line-height:1.5">\u201C'+esc((m&&m.body||'').slice(0,140))+'\u201D</div>'+
+        '<div class="tiny" style="margin-top:8px">It disappears from his page too.</div>'+
+        '<div style="height:14px"></div><button class="btn pk big" id="gmDelYes">DELETE IT</button>'+
+        '<div style="height:8px"></div><button class="btn gy" style="width:100%;font-size:9px" onclick="closeModal()">KEEP IT</button></div>');
+      $('#gmDelYes').addEventListener('click',async()=>{
+        closeModal();
+        if(await gmDel(id)){ gmModPaint(); toast('COMMENT DELETED'); }
+      });
+    }));
+    const wipe=$('#gmWipe');
+    if(wipe)wipe.addEventListener('click',()=>{
+      modal('<div class="center"><div style="font-size:38px">\u{1F5D1}\uFE0F</div>'+
+        '<div class="pix neon y" style="font-size:10px;margin:10px 0;line-height:2">DELETE ALL '+GM.list.length+' COMMENTS?</div>'+
+        '<div style="font-size:16px;line-height:1.5">His whole conversation with the Game Master disappears. This cannot be undone.</div>'+
+        '<div style="height:14px"></div><button class="btn pk big" id="gmWipeYes">YES, DELETE THEM ALL</button>'+
+        '<div style="height:8px"></div><button class="btn gy" style="width:100%;font-size:9px" onclick="closeModal()">CANCEL</button></div>');
+      $('#gmWipeYes').addEventListener('click',async()=>{
+        closeModal();
+        if(await gmClear()){ gmModPaint(); toast('ALL COMMENTS DELETED'); }
+      });
+    });
   }
   if(gmReady()){ gmLoad(true).then(gmModPaint); }
   const gmS=$('#gmModSend');
@@ -2134,6 +2199,16 @@ async function gmSend(who,body){
   const id=cloudIdent(); if(!id)return false;
   try{ await gmCall('msg_send',{p_box:id.id,p_pin:id.pin,p_who:who,p_body:body}); await gmLoad(true); return true; }
   catch(e){ toast('MESSAGE DID NOT SEND:<br>'+esc(e.message),3000); return false; }
+}
+async function gmDel(id){
+  const ident=cloudIdent(); if(!ident)return false;
+  try{ await gmCall('msg_del',{p_box:ident.id,p_pin:ident.pin,p_msg:Number(id)}); await gmLoad(true); return true; }
+  catch(e){ toast('COULD NOT DELETE:<br>'+esc(e.message),3000); return false; }
+}
+async function gmClear(){
+  const ident=cloudIdent(); if(!ident)return false;
+  try{ await gmCall('msg_clear',{p_box:ident.id,p_pin:ident.pin}); await gmLoad(true); return true; }
+  catch(e){ toast('COULD NOT CLEAR:<br>'+esc(e.message),3000); return false; }
 }
 async function gmMarkSeen(){
   const id=cloudIdent(); if(!id||!GM.unread)return;
@@ -2550,7 +2625,7 @@ function wirePage(p){
   const at=$('#attackBtn'); if(at)at.addEventListener('click',()=>doAttack());
   const pc=$('#pColor'); if(pc)pc.addEventListener('click',()=>finishChapter());
   if(p.type==='game') initGame(p.level||'c1a');
-  if(p.gift && !ST.gifted?.[p.id]){
+  if(p.gift && !(ST.gifted&&ST.gifted[p.id])){
     ST.gifted=ST.gifted||{}; ST.gifted[p.id]=true;
     if(p.gift.coins) setTimeout(()=>addCoins(p.gift.coins,'A GIFT FOR YOU'),500);
     if(p.gift.badge) setTimeout(()=>addBadge(p.gift.badge[0],p.gift.badge[1]),1400);
@@ -5116,6 +5191,7 @@ renderHome(); show('s-home');
 hud();
 setTimeout(()=>{try{cloudBoot();}catch(e){}},400);
 setTimeout(()=>{try{gmLoad(true);gmPoll();}catch(e){}},1200);
+window.__ok=true;
 window.closeModal=closeModal; window.show=show; window.renderMap=renderMap;
 </script>
 </body>
