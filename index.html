@@ -461,6 +461,11 @@ body.dev-laptop .palette{grid-template-rows:repeat(2,auto)}
 .cmt .crow .lk{cursor:pointer;display:inline-flex;align-items:center;gap:5px;position:relative}
 .cmt .crow .lk.on{color:var(--green)}
 .cmt .crow .rp{cursor:pointer;font-family:var(--pix);font-size:6.5px;letter-spacing:.04em}
+.quickrow{display:flex;gap:7px;overflow-x:auto;padding:10px 2px 4px;scrollbar-width:thin}
+.quickrow::-webkit-scrollbar{height:5px}.quickrow::-webkit-scrollbar-thumb{background:rgba(61,255,119,.4);border-radius:9px}
+.quick{flex:0 0 auto;border-radius:999px;padding:9px 13px;font-family:var(--body);font-size:14px;font-weight:700;
+  border:2px solid rgba(61,255,119,.45);background:rgba(61,255,119,.12);color:#eaffef;cursor:pointer;white-space:nowrap}
+.quick:active{transform:scale(.94)}
 .cmtbox{display:flex;gap:10px;align-items:flex-start;margin:14px 0 6px}
 .cmtbox textarea{flex:1 1 auto;width:100%;min-height:52px;padding:9px 11px;border-radius:12px;
   border:2px solid rgba(255,255,255,.18);background:rgba(0,0,0,.45);color:#fff;font-family:var(--body);
@@ -2396,6 +2401,9 @@ function howto(id,body){
 /* ============================================================
    THE GAME MASTER — a mailbox between him and someone mysterious
    ============================================================ */
+const QUICKR=['\u{1F44B} HI','\u{1F44D} OK!','\u{2705} I DID IT','\u{1F4B0} HOW MANY COINS DO I NEED?',
+  '\u{1F914} WHAT DO I DO NOW?','\u{1F62E} THAT IS HARD','\u{1F4AA} I WILL BEAT YOU','\u{1F602} HAHAHA',
+  '\u{1F6A8} HELP ME','\u{1F680} I AM BUILDING MY ROCKET'];
 const GM={list:[],unread:0,loading:false,lastPoll:0,timer:null};
 function gmSVG(size){
   return '<svg viewBox="0 0 100 100" width="'+size+'" height="'+size+'">'+
@@ -2554,9 +2562,11 @@ function renderMail(){
        '</div></div>';
   });
   /* ---- add a comment ---- */
+  h+='<div class="quickrow" id="quickRow">'+QUICKR.map((q,i)=>'<button class="quick" data-q="'+i+'">'+q+'</button>').join('')+'</div>';
   h+='<div class="cmtbox"><div class="cmt" style="padding:0;border:0"><div class="av">'+avatarSVG(34)+'</div></div>'+
      '<textarea id="gmIn" placeholder="Add a comment..." maxlength="600"></textarea></div>'+
      '<div class="row"><button class="btn pk" id="gmSay" style="flex:1">\u{1F4AC} COMMENT</button>'+
+     '<button class="btn cy" id="gmMic" style="flex:0 0 auto;font-size:9px">\u{1F3A4} TALK</button>'+
      '<button class="btn gy" id="gmRead" style="flex:0 0 auto;font-size:9px">\u{1F50A} READ TO ME</button></div>'+
      '<div style="height:18px"></div>';
   b.innerHTML=h;
@@ -2604,6 +2614,31 @@ function renderMail(){
     $('#gmIn').value=''; beep(1000,.1);
     if(await gmSend('kid',t)){ renderMail(); toast('\u{1F4AC} COMMENT POSTED'); }
   });
+  /* one tap = a real answer. He types slowly; this keeps the conversation going. */
+  b.querySelectorAll('[data-q]').forEach(el=>el.addEventListener('click',async()=>{
+    const t=QUICKR[+el.dataset.q]; beep(1050,.09);
+    if(await gmSend('kid',t)){ renderMail(); }
+  }));
+  /* he clearly prefers talking to typing \u2014 let him */
+  const mic=$('#gmMic');
+  if(mic){
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR){ mic.style.display='none'; }
+    else mic.addEventListener('click',()=>{
+      try{
+        const rec=new SR();
+        rec.lang='en-US'; rec.interimResults=false; rec.maxAlternatives=1;
+        mic.textContent='\u{1F534} LISTENING'; mic.className='btn pk';
+        rec.onresult=(e)=>{
+          const said=(e.results&&e.results[0]&&e.results[0][0]&&e.results[0][0].transcript)||'';
+          const box=$('#gmIn'); if(box){ box.value=(box.value?box.value+' ':'')+said; box.focus(); }
+        };
+        rec.onerror=()=>{ toast('COULD NOT HEAR YOU \u2014 TRY TYPING',2200); };
+        rec.onend=()=>{ mic.textContent='\u{1F3A4} TALK'; mic.className='btn cy'; };
+        rec.start();
+      }catch(e){ toast('TALKING IS NOT AVAILABLE ON THIS GADGET',2400); mic.style.display='none'; }
+    });
+  }
   $('#gmRead').addEventListener('click',()=>{
     const last=[...GM.list].reverse().find(m=>m.who==='gm');
     if(last)speakSegments([{t:last.body,v:'gamemaster'}]);
@@ -2846,9 +2881,24 @@ function wirePage(p){
     if(+b.dataset.fl===fq.a){beep(1300,.16);addCoins(30,'FLAG GATE OPENED!');addBadge('flags','FLAG MASTER');
       delete ST.fq[p.id];
       const i=pageIndexById(p.go); ST.i=i>=0?i:ST.i+1; speechStop(); renderPage();}
-    else{beep(160,.3,'sawtooth',.07);
-      toast('NOT THAT ONE.<br>THAT WAS '+fq.opts[fq.a]+'.<br>HERE IS A NEW FLAG \u{1F440}',3200);
-      ST.fq[p.id]=pickFlagQ(); renderPage();}
+    else{
+      /* teach, do not just reshuffle: he used to tap through 19 flags in 4 seconds */
+      beep(160,.3,'sawtooth',.07);
+      const right=fq.opts[fq.a];
+      $('#storyBody').querySelectorAll('[data-fl]').forEach(x=>{
+        x.setAttribute('disabled','');
+        if(+x.dataset.fl===fq.a)x.className='btn yl';
+        else if(x===b)x.className='btn gy';
+      });
+      const box=$('#storyBody').querySelector('.flagbox');
+      if(box)box.insertAdjacentHTML('afterend',
+        '<div class="card center" id="flagTeach" style="margin-top:10px;border-color:var(--yellow)">'+
+        '<div class="pix" style="font-size:11px;color:var(--yellow);line-height:2">THIS FLAG IS</div>'+
+        '<div class="pix neon g" style="font-size:clamp(13px,3.4vmin,20px);line-height:2;margin:6px 0">'+esc(right)+'</div>'+
+        '<div style="font-size:16px">Say it out loud. A new flag is coming.</div></div>');
+      try{ speakSegments([{t:'This flag is '+right+'. Say it out loud.',v:'narrator'}]); }catch(e){}
+      setTimeout(()=>{ ST.fq[p.id]=pickFlagQ(); renderPage(); },2600);
+    }
   }));
   $('#storyBody').querySelectorAll('[data-k]').forEach(bt=>bt.addEventListener('click',()=>{
     const st=ST.math, pr=st.problems[st.i], k=bt.dataset.k; beep(700,.05);
