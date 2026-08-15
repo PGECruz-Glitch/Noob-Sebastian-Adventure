@@ -967,6 +967,10 @@ function renderHome(){
        '<div class="acts"><button class="btn" data-play="'+p.id+'">PLAY</button>'+
        (PROF.list.length>1?'<button class="btn gy" data-del="'+p.id+'">\u{1F5D1}\u{FE0F}</button>':'')+'</div></div>';
   });
+  h+='<div style="height:16px"></div><div class="pix neon c" style="font-size:9px;line-height:2;text-align:center">\u{1F30D} EVERYONE, ON EVERY GADGET</div>'+
+     '<div id="boardBody"></div>'+
+     '<div style="height:6px"></div><div class="row"><button class="btn gy" id="boardRefresh" style="flex:1;font-size:8px">\u{1F504} REFRESH THE SCOREBOARD</button></div>'+
+     '<div style="height:16px"></div>';
   h+='<div class="homebtns"><button class="btn cy" id="homeAdd">\u{2795} ADD ACCOUNT</button>'+
      '<button class="btn yl" id="homeExam">\u{1F393} EARN COINS</button></div>';
   h+='<div style="height:10px"></div><div class="homebtns">'+
@@ -975,6 +979,10 @@ function renderHome(){
      '<button class="btn gy" id="homeMod" style="font-size:9px">\u{1F512} GROWN-UP</button></div>';
   h+='<div style="height:18px"></div>';
   b.innerHTML=h;
+  paintBoard();
+  const br=$('#boardRefresh');
+  if(br)br.addEventListener('click',()=>{ br.textContent='\u{1F504} LOOKING\u2026'; boardLoad(false).then(()=>{paintBoard();}); });
+  if(cloudReady()&&Date.now()-BOARD.at>20000) boardLoad(true).then(paintBoard);
   b.querySelectorAll('[data-play]').forEach(el=>el.addEventListener('click',()=>{
     const p=PROF.list.find(x=>x.id===el.dataset.play);
     askPass(p,'ENTER THE PASSWORD FOR',()=>{ audioInit(); if(Snd.ctx&&Snd.ctx.state==='suspended')Snd.ctx.resume();
@@ -3030,9 +3038,15 @@ function initGame(levelId){
     ctx.save(); ctx.translate(PX,PY); ctx.rotate(G.rot*Math.PI/180);
     ctx.fillStyle=S.cube.color; ctx.shadowColor=S.cube.color; ctx.shadowBlur=14;
     ctx.fillRect(-cell*.5,-cell*.5,cell,cell); ctx.shadowBlur=0;
-    ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(-cell*.28,-cell*.18,cell*.16,cell*.2); ctx.fillRect(cell*.12,-cell*.18,cell*.16,cell*.2);
-    ctx.fillRect(-cell*.2,cell*.12,cell*.4,cell*.09);
-    ctx.strokeStyle='rgba(0,0,0,.45)';ctx.lineWidth=2;ctx.strokeRect(-cell*.5,-cell*.5,cell,cell);
+    /* face: white behind the eyes so it still reads on a small, dim handheld screen */
+    ctx.fillStyle='#ffffff';
+    ctx.fillRect(-cell*.32,-cell*.24,cell*.24,cell*.28);
+    ctx.fillRect(cell*.08,-cell*.24,cell*.24,cell*.28);
+    ctx.fillStyle='#0b0f16';
+    ctx.fillRect(-cell*.27,-cell*.19,cell*.14,cell*.18);
+    ctx.fillRect(cell*.13,-cell*.19,cell*.14,cell*.18);
+    ctx.fillRect(-cell*.24,cell*.13,cell*.48,cell*.11);
+    ctx.strokeStyle='rgba(0,0,0,.55)';ctx.lineWidth=Math.max(2,cell*.07);ctx.strokeRect(-cell*.5,-cell*.5,cell,cell);
     ctx.restore();
     /* companion — same jump, half a beat behind */
     if(S.companion&&S.companion[n]&&G.hist&&G.hist.length){
@@ -3415,6 +3429,7 @@ async function cloudPush(force){
     const payload=Object.assign({},S,{_t:Date.now()});
     await cloudRPC('save_put',{p_id:ident.id,p_pin:ident.pin,p_data:payload});
     Cloud.lastPush=Date.now(); cloudSetStatus('ok');
+    try{ boardPush(); }catch(e){}
   }catch(e){ cloudSetStatus('err'); if(force)toast('COULD NOT SAVE ONLINE:<br>'+esc(e.message),3200); }
   Cloud.busy=false;
   if(Cloud.queued){Cloud.queued=false;setTimeout(()=>cloudPush(),400);}
@@ -3502,6 +3517,68 @@ async function cloudBoot(){
     }
     cloudSetStatus('ok');
   }catch(e){ cloudSetStatus('err'); }
+}
+
+/* ============================================================
+   THE ONLINE SCOREBOARD
+   A tiny public summary per cloud account — name, coins, stars, percent,
+   and what the rocket looks like. No save data, no PIN, nothing private.
+   It lets every gadget see how the others are doing.
+   ============================================================ */
+const BOARD={rows:[],at:0,busy:false};
+function boardPct(st){ try{ return progressPct(st); }catch(e){ return 0; } }
+async function boardPush(){
+  const id=cloudIdent(); if(!id||!cloudReady()||BOARD.busy)return;
+  BOARD.busy=true;
+  try{
+    await cloudRPC('board_put',{
+      p_id:id.id, p_pin:id.pin,
+      p_name:String(id.id).slice(0,20),   /* the ACCOUNT name \u2014 the same one everywhere */
+      p_emoji:String(me().emoji||'\u{1F7E9}').slice(0,4),
+      p_coins:Math.round(S.coins||0), p_stars:Math.round(S.stars||0),
+      p_badges:((S.badges||[]).length), p_subs:Math.round(S.subs||0),
+      p_pct:boardPct(S),
+      p_look:{rocket:S.rocket||null,cube:(S.cube&&S.cube.color)||'#3dff77'}
+    });
+  }catch(e){}
+  BOARD.busy=false;
+}
+async function boardLoad(silent){
+  if(!cloudReady())return [];
+  try{
+    const rows=await cloudRPC('board_list',{});
+    BOARD.rows=Array.isArray(rows)?rows:[];
+    BOARD.at=Date.now();
+  }catch(e){ if(!silent)toast('COULD NOT LOAD THE SCOREBOARD',2200); }
+  return BOARD.rows;
+}
+function boardHTML(){
+  const mine=(cloudIdent()||{}).id;
+  const rows=BOARD.rows.slice().sort((a,b)=>(b.pct-a.pct)||(b.coins-a.coins));
+  if(!cloudReady())
+    return '<div class="tiny center" style="padding:10px">Cloud is not set up, so only this gadget’s accounts are shown.</div>';
+  if(!rows.length)
+    return '<div class="tiny center" style="padding:10px">Nobody has signed in online yet.<br>Sign in with ☁️ PLAY ON ANY GADGET and everyone shows up here.</div>';
+  let h='';
+  rows.forEach((r,i)=>{
+    let rk;
+    try{ rk=rocketSVG((r.look&&r.look.rocket)||freshRocket(),{noFlame:false}); }
+    catch(e){ rk=rocketSVG(freshRocket(),{noFlame:false}); }
+    const me2=(r.id===mine);
+    h+='<div class="acct '+(me2?'mine':'')+'" style="border-color:'+(i===0?'#ffd93d55':'rgba(255,255,255,.18)')+'">'+
+       '<div class="rkt">'+rk+'</div>'+
+       '<div class="info"><div class="nm" style="color:'+(i===0?'#ffd93d':'#e6f1ff')+'">'+
+         (i===0?'\u{1F3C6} ':'')+esc(r.emoji||'')+' '+esc(r.name||r.id)+
+         (me2?'<span style="font-size:.72em;color:#9fb3c8">(you)</span>':'')+'</div>'+
+       '<div class="stats"><span>\u{1F7E1} '+(r.coins||0)+'</span><span>\u{1F396}\u{FE0F} '+(r.badges||0)+'</span>'+
+         '<span>⭐ '+(r.stars||0)+'</span><span>\u{1F4FA} '+(r.subs||0)+'</span></div>'+
+       '<div class="bar"><b style="width:'+(r.pct||0)+'%"></b></div><div class="pct">'+(r.pct||0)+'% COMPLETE</div></div>'+
+       '</div>';
+  });
+  return h;
+}
+function paintBoard(){
+  const el=$('#boardBody'); if(el)el.innerHTML=boardHTML();
 }
 
 /* ============================================================
