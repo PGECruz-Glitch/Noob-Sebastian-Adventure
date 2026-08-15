@@ -548,8 +548,9 @@ body.dev-laptop .palette{grid-template-rows:repeat(2,auto)}
 .qcard{background:var(--panel);border:2px solid rgba(61,255,119,.35);border-radius:18px;padding:16px}
 .qnum{font-family:var(--pix);font-size:8px;color:var(--cyan);line-height:1.9}
 .qtext{font-size:clamp(17px,3.3vmin,23px);line-height:1.55;margin:10px 0 6px;font-weight:600}
-.qshape{display:flex;justify-content:center;padding:6px 0}
-.qshape svg{width:min(230px,58vw);height:auto}
+.qshape{display:flex;justify-content:center;padding:8px 0}
+.qshape svg{width:min(300px,74vw);height:auto;background:#f7fbff;border-radius:12px;
+  border:2px solid rgba(255,255,255,.35);box-shadow:0 6px 20px rgba(0,0,0,.45)}
 .qopts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
 .qopts .btn{padding:15px 8px;font-size:clamp(10px,2.3vmin,13px)}
 .qbar{height:9px;border-radius:6px;background:rgba(255,255,255,.13);overflow:hidden;margin-top:12px}
@@ -961,13 +962,20 @@ function renderHome(){
        '<div class="rkt">'+rk+'</div>'+
        '<div class="info"><div class="nm" style="color:'+p.color+'">'+p.emoji+' '+esc(p.name)+
          (p.pw?'<span class="lockicon">\u{1F512}</span>':'')+(p.id===PROF.active?'<span style="font-size:.72em;color:#9fb3c8">(you)</span>':'')+'</div>'+
+       '<div class="tiny" style="margin:2px 0 4px">'+
+         ((p.cloud&&p.cloud.id)
+            ? '\u{2601}\u{FE0F} saves online as <b>'+esc(p.cloud.id)+'</b>'
+            : '<span style="color:#ffd93d">\u{1F4F4} this gadget only \u2014 not signed in</span>')+'</div>'+
        '<div class="stats"><span>\u{1F7E1} '+(st.coins||0)+'</span><span>\u{1F396}\u{FE0F} '+((st.badges||[]).length)+'</span>'+
          '<span>⭐ '+(st.stars||0)+'</span><span>\u{1F680} '+(((st.rocket&&st.rocket.missions)||[]).length)+'</span></div>'+
        '<div class="bar"><b style="width:'+pct+'%"></b></div><div class="pct">'+pct+'% COMPLETE</div></div>'+
        '<div class="acts"><button class="btn" data-play="'+p.id+'">PLAY</button>'+
        (PROF.list.length>1?'<button class="btn gy" data-del="'+p.id+'">\u{1F5D1}\u{FE0F}</button>':'')+'</div></div>';
   });
+  const anyLinked=PROF.list.some(x=>x.cloud&&x.cloud.id);
   h+='<div style="height:16px"></div><div class="pix neon c" style="font-size:9px;line-height:2;text-align:center">\u{1F30D} EVERYONE, ON EVERY GADGET</div>'+
+     '<div class="tiny center" style="margin:2px 0 8px">Everybody who plays online \u2014 the iPad, the handheld, the laptop.</div>'+
+     (anyLinked?'':'<div class="tiny center" style="color:#ffd93d;margin-bottom:8px">Nothing on this gadget is signed in yet, so its progress does not show below.</div>')+
      '<div id="boardBody"></div>'+
      '<div style="height:6px"></div><div class="row"><button class="btn gy" id="boardRefresh" style="flex:1;font-size:8px">\u{1F504} REFRESH THE SCOREBOARD</button></div>'+
      '<div style="height:16px"></div>';
@@ -1223,6 +1231,43 @@ function beep(f,dur,type,vol){
   o.type=type||'square';o.frequency.value=f;g.gain.setValueAtTime(0,t);
   g.gain.linearRampToValueAtTime(vol||.05,t+.012);g.gain.exponentialRampToValueAtTime(.0001,t+(dur||.12));
   o.connect(g);g.connect(Snd.sfxGain);o.start(t);o.stop(t+(dur||.12)+.02);
+}
+
+/* ---- OOF ----  a short vocal "oof" for when he dies, built from two vowel
+   formants sliding down, plus a breathy tail. No sample file, no download. */
+function oof(){
+  audioInit(); if(!Snd.ctx||!Snd.sfxOn)return;
+  const ctx=Snd.ctx, t=ctx.currentTime, out=ctx.createGain();
+  out.gain.setValueAtTime(0,t);
+  out.gain.linearRampToValueAtTime(.5,t+.02);
+  out.gain.setValueAtTime(.5,t+.16);
+  out.gain.exponentialRampToValueAtTime(.0008,t+.42);
+  out.connect(Snd.sfxGain);
+  /* the voice: a buzzy tone that drops in pitch like a grunt */
+  const src=ctx.createOscillator();
+  src.type='sawtooth';
+  src.frequency.setValueAtTime(196,t);
+  src.frequency.exponentialRampToValueAtTime(150,t+.10);
+  src.frequency.exponentialRampToValueAtTime(88,t+.40);
+  /* two formants: "oo" (300/870) sliding toward "uh" (600/1100) = an oof */
+  const f1=ctx.createBiquadFilter(), f2=ctx.createBiquadFilter();
+  f1.type='bandpass'; f1.Q.value=7;
+  f1.frequency.setValueAtTime(430,t); f1.frequency.exponentialRampToValueAtTime(300,t+.34);
+  f2.type='bandpass'; f2.Q.value=9;
+  f2.frequency.setValueAtTime(1100,t); f2.frequency.exponentialRampToValueAtTime(820,t+.34);
+  const g2=ctx.createGain(); g2.gain.value=.5;
+  src.connect(f1); f1.connect(out);
+  src.connect(f2); f2.connect(g2); g2.connect(out);
+  src.start(t); src.stop(t+.46);
+  /* a puff of breath at the front so it lands like a thump, not a beep */
+  try{
+    const n=ctx.createBufferSource(); n.buffer=Snd.noise;
+    const nf=ctx.createBiquadFilter(); nf.type='lowpass'; nf.frequency.value=900;
+    const ng=ctx.createGain();
+    ng.gain.setValueAtTime(.34,t); ng.gain.exponentialRampToValueAtTime(.001,t+.13);
+    n.connect(nf); nf.connect(ng); ng.connect(Snd.sfxGain);
+    n.start(t); n.stop(t+.15);
+  }catch(e){}
 }
 
 /* ---- instruments ---- */
@@ -1719,6 +1764,16 @@ function renderMod(){
   h+='<div class="card" style="margin-top:14px"><div class="pix neon c" style="font-size:10px;line-height:2">QUICK CONTROLS</div>';
   h+='<div class="row" style="margin-top:10px">'+CH.map(x=>'<button class="btn '+(S.unlocked[x.n]?'yl':'gy')+'" data-tog="'+x.n+'" style="font-size:9px;flex:1;min-width:64px">L'+x.n+' '+(S.unlocked[x.n]?'OPEN':'LOCKED')+'</button>').join('')+'</div>';
   h+='<div style="height:14px"></div><label>PASTE A PARENT CODE</label><input id="modPaste" placeholder="NSB-..."><div style="height:8px"></div><button class="btn cy" id="modPasteGo" style="width:100%">APPLY CODE</button>';
+  /* ---- reach into the child's own cloud account from here ---- */
+  h+='<div style="height:16px"></div><div style="border-top:1px solid rgba(255,255,255,.15);padding-top:12px"></div>'+
+     '<label>\u{1F9D2} HIS ACCOUNT, FROM THIS GADGET <span class="tiny" style="color:#9fb3c8">(uses the account + PIN set under THE GAME MASTER)</span></label>'+
+     (gmIdent()
+       ? '<div class="tiny">Working on <b>'+esc(gmIdent().id.toUpperCase())+'</b>.</div>'+
+         '<div style="height:8px"></div><div class="row">'+
+         '<button class="btn cy" id="remoteEp" style="flex:1;font-size:8px">\u{1F3AC} GET HIS EPISODE</button>'+
+         '<button class="btn gy" id="remoteReset" style="flex:1;font-size:8px">\u{1F9F9} RESET HIS PROGRESS</button></div>'+
+         '<div id="remoteOut"></div>'
+       : '<div class="tiny">Set his account name and PIN under THE GAME MASTER above, then this can reach it.</div>');
   h+='<div style="height:14px"></div><label>\u{1F9F9} START FRESH <span class="tiny" style="color:#9fb3c8">(wipes every account on this gadget)</span></label>'+
      '<button class="btn gy" id="modWipe" style="width:100%;font-size:9px">\u{1F9F9} ERASE EVERYTHING ON THIS GADGET</button>';
   h+='<div style="height:14px"></div><label>\u{1F4F1} SCREEN <span class="tiny" style="color:#9fb3c8">(turn this on if a gadget only shows the top of the page)</span></label>'+
@@ -1826,6 +1881,50 @@ function renderMod(){
     const n=+b.dataset.approve; S.unlocked[n]=true; delete S.pending[n]; save(); toast('LEVEL '+n+' APPROVED ❤️'); renderMod();
   }));
   $('#modPasteGo').addEventListener('click',()=>{const r=applyCode($('#modPaste').value);toast(r?('CODE APPLIED TO LEVEL '+r):'THAT CODE DID NOT WORK');if(r)renderMod();});
+  const rEp=$('#remoteEp');
+  if(rEp)rEp.addEventListener('click',async()=>{
+    const id=gmIdent(); if(!id)return;
+    $('#remoteOut').innerHTML='<div class="tiny" style="margin-top:8px">Looking in '+esc(id.id)+'\u2019s cloud save\u2026</div>';
+    try{
+      const data=await cloudRPC('save_get',{p_id:id.id,p_pin:id.pin});
+      if(!data){ $('#remoteOut').innerHTML='<div class="tiny" style="margin-top:8px;color:#ffd93d">No cloud save for that account yet.</div>'; return; }
+      const reps=data.replays||{};
+      const keys=Object.keys(reps);
+      if(!keys.length){
+        $('#remoteOut').innerHTML='<div class="tiny" style="margin-top:8px;color:#ffd93d">Nothing recorded yet. A chapter is only saved when he <b>finishes</b> it \u2014 he is part way through.</div>';
+        return;
+      }
+      let h2='<div style="height:8px"></div><div class="tiny">Found: '+keys.map(k=>'Chapter '+k+' \u2014 '+Math.round((reps[k].secs||0)/60*10)/10+' min, '+((reps[k].runs||[]).length)+' runs').join('<br>')+'</div>';
+      keys.forEach(k=>{
+        let code='';
+        try{ code='NSBEP-'+btoa(unescape(encodeURIComponent(JSON.stringify(reps[k])))); }catch(e){}
+        h2+='<div style="height:8px"></div><div class="codebox" style="max-height:120px;overflow:auto">'+esc(code)+'</div>';
+      });
+      h2+='<div class="tiny" style="margin-top:6px">Send that to Claude and the episode gets built from it.</div>';
+      $('#remoteOut').innerHTML=h2;
+    }catch(e){ $('#remoteOut').innerHTML='<div class="tiny" style="margin-top:8px;color:#ff8a8a">'+esc(e.message)+'</div>'; }
+  });
+  const rRes=$('#remoteReset');
+  if(rRes)rRes.addEventListener('click',()=>{
+    const id=gmIdent(); if(!id)return;
+    modal('<div class="center"><div style="font-size:38px">\u{1F9F9}</div>'+
+      '<div class="pix neon y" style="font-size:10px;margin:10px 0;line-height:2">RESET '+esc(id.id.toUpperCase())+'\u2019S<br>PROGRESS ONLINE?</div>'+
+      '<div style="font-size:16px;line-height:1.55">His coins, badges, stars, rocket, outfit, colouring and levels all go back to the start.<br><br>'+
+      'His gadget picks this up the next time it opens the game. If he is playing <b>right now</b>, wait until he stops \u2014 otherwise his gadget may put its own progress back.</div>'+
+      '<div style="height:14px"></div><button class="btn pk big" id="rrYes">RESET HIM</button>'+
+      '<div style="height:8px"></div><button class="btn gy" style="width:100%;font-size:9px" onclick="closeModal()">CANCEL</button></div>');
+    $('#rrYes').addEventListener('click',async()=>{
+      closeModal();
+      try{
+        const fresh=freshState(); fresh._t=Date.now();
+        await cloudRPC('save_put',{p_id:id.id,p_pin:id.pin,p_data:fresh});
+        try{ await cloudRPC('board_put',{p_id:id.id,p_pin:id.pin,p_name:id.id,p_emoji:'\u{1F7E9}',
+          p_coins:0,p_stars:0,p_badges:0,p_subs:0,p_pct:0,p_look:{}}); }catch(e){}
+        toast('\u{1F9F9} '+id.id.toUpperCase()+' RESET ONLINE \u2014 HIS GADGET PICKS IT UP NEXT TIME IT OPENS',4200);
+        boardLoad(true).then(()=>{ if($('#boardBody'))paintBoard(); });
+      }catch(e){ toast('COULD NOT RESET:<br>'+esc(e.message),3400); }
+    });
+  });
   const mWipe=$('#modWipe');
   if(mWipe)mWipe.addEventListener('click',()=>{
     modal('<div class="center"><div style="font-size:38px">\u{1F9F9}</div>'+
@@ -2901,7 +3000,7 @@ function initGame(levelId){
     if(p>S.best[akey])S.best[akey]=p;
     S.attempts[akey]++; save();
     recGDEnd(false,p);
-    beep(140,.34,'sawtooth',.07);
+    oof();
     wrap.classList.add('gdshake'); setTimeout(()=>wrap.classList.remove('gdshake'),300);
     const a=S.attempts[akey];
     let extra='';
@@ -3565,11 +3664,13 @@ function boardHTML(){
     try{ rk=rocketSVG((r.look&&r.look.rocket)||freshRocket(),{noFlame:false}); }
     catch(e){ rk=rocketSVG(freshRocket(),{noFlame:false}); }
     const me2=(r.id===mine);
+    const localHere=PROF.list.some(x=>x.cloud&&x.cloud.id===r.id);
     h+='<div class="acct '+(me2?'mine':'')+'" style="border-color:'+(i===0?'#ffd93d55':'rgba(255,255,255,.18)')+'">'+
        '<div class="rkt">'+rk+'</div>'+
        '<div class="info"><div class="nm" style="color:'+(i===0?'#ffd93d':'#e6f1ff')+'">'+
          (i===0?'\u{1F3C6} ':'')+esc(r.emoji||'')+' '+esc(r.name||r.id)+
-         (me2?'<span style="font-size:.72em;color:#9fb3c8">(you)</span>':'')+'</div>'+
+         (me2?'<span style="font-size:.72em;color:#9fb3c8">(you)</span>'
+             :(localHere?'<span style="font-size:.72em;color:#9fb3c8">(on this gadget)</span>':''))+'</div>'+
        '<div class="stats"><span>\u{1F7E1} '+(r.coins||0)+'</span><span>\u{1F396}\u{FE0F} '+(r.badges||0)+'</span>'+
          '<span>⭐ '+(r.stars||0)+'</span><span>\u{1F4FA} '+(r.subs||0)+'</span></div>'+
        '<div class="bar"><b style="width:'+(r.pct||0)+'%"></b></div><div class="pct">'+(r.pct||0)+'% COMPLETE</div></div>'+
@@ -4540,6 +4641,64 @@ function shapeSVG(n,fill){
   const rot=n%2?-Math.PI/2:(n===4?Math.PI/4:0);
   return '<svg viewBox="0 0 120 120"><polygon points="'+poly(n,46,60,60,rot)+'" fill="'+fill+'" stroke="#0b0f16" stroke-width="3"/></svg>';
 }
+/* ---------- diagrams for the exam questions ----------
+   Every geometry question gets a picture. Dark outlines never sit on a dark
+   background: the figure always has its own light card behind it. */
+function figWrap(inner,vb){
+  return '<svg viewBox="'+(vb||'0 0 200 140')+'"><rect x="0" y="0" width="200" height="140" rx="10" fill="#f7fbff"/>'+inner+'</svg>';
+}
+function rectFig(a,b,unit){
+  const maxW=140,maxH=86;
+  const k=Math.min(maxW/Math.max(a,b),maxH/Math.max(a,b));
+  const w=Math.max(28,a*k), h=Math.max(22,b*k);
+  const x=(200-w)/2, y=(140-h)/2+4;
+  return figWrap(
+    '<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+w.toFixed(1)+'" height="'+h.toFixed(1)+'" '+
+      'fill="#8fe3ff" stroke="#0b3550" stroke-width="3"/>'+
+    '<text x="100" y="'+(y-8).toFixed(1)+'" text-anchor="middle" font-family="monospace" font-size="17" fill="#0b3550">'+a+' '+(unit||'cm')+'</text>'+
+    '<text x="'+(x-8).toFixed(1)+'" y="'+(y+h/2+6).toFixed(1)+'" text-anchor="end" font-family="monospace" font-size="17" fill="#0b3550">'+b+'</text>');
+}
+function squareFig(a,unit){
+  const s=88, x=(200-s)/2, y=(140-s)/2+2;
+  return figWrap(
+    '<rect x="'+x+'" y="'+y+'" width="'+s+'" height="'+s+'" fill="#b6f5c8" stroke="#0b3550" stroke-width="3"/>'+
+    '<text x="100" y="'+(y-8)+'" text-anchor="middle" font-family="monospace" font-size="17" fill="#0b3550">'+a+' '+(unit||'cm')+'</text>');
+}
+function angleFig(deg){
+  const cx=54, cy=104, R=104;
+  const rad=deg*Math.PI/180;
+  const x2=cx+R*Math.cos(-rad), y2=cy+R*Math.sin(-rad);
+  const ar=30;
+  return figWrap(
+    '<line x1="'+cx+'" y1="'+cy+'" x2="'+(cx+R)+'" y2="'+cy+'" stroke="#0b3550" stroke-width="4" stroke-linecap="round"/>'+
+    '<line x1="'+cx+'" y1="'+cy+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'" stroke="#0b3550" stroke-width="4" stroke-linecap="round"/>'+
+    '<path d="M '+(cx+ar)+' '+cy+' A '+ar+' '+ar+' 0 0 0 '+(cx+ar*Math.cos(-rad)).toFixed(1)+' '+(cy+ar*Math.sin(-rad)).toFixed(1)+'" '+
+      'fill="none" stroke="#ff4fd8" stroke-width="3"/>'+
+    '<circle cx="'+cx+'" cy="'+cy+'" r="4" fill="#0b3550"/>');
+}
+function rhombusFig(){
+  return figWrap('<polygon points="100,26 156,70 100,114 44,70" fill="#c9b6ff" stroke="#0b3550" stroke-width="3"/>');
+}
+function solidFig(nm){
+  const g={
+   'CUBE':'<g stroke="#0b3550" stroke-width="3" fill="#ffd98a">'+
+     '<rect x="62" y="46" width="70" height="70"/>'+
+     '<polygon points="62,46 88,22 158,22 132,46" fill="#ffc95c"/>'+
+     '<polygon points="132,46 158,22 158,92 132,116" fill="#f0b13f"/></g>',
+   'SPHERE':'<circle cx="100" cy="72" r="46" fill="#ffd98a" stroke="#0b3550" stroke-width="3"/>'+
+     '<ellipse cx="100" cy="72" rx="46" ry="15" fill="none" stroke="#0b3550" stroke-width="2" opacity=".55"/>',
+   'CYLINDER':'<g stroke="#0b3550" stroke-width="3" fill="#ffd98a">'+
+     '<rect x="60" y="38" width="80" height="66" stroke="none"/>'+
+     '<line x1="60" y1="38" x2="60" y2="104"/><line x1="140" y1="38" x2="140" y2="104"/>'+
+     '<ellipse cx="100" cy="104" rx="40" ry="14"/><ellipse cx="100" cy="38" rx="40" ry="14" fill="#ffc95c"/></g>',
+   'CONE':'<g stroke="#0b3550" stroke-width="3" fill="#ffd98a">'+
+     '<polygon points="100,20 142,102 58,102"/><ellipse cx="100" cy="102" rx="42" ry="14" fill="#ffc95c"/></g>',
+   'SQUARE PYRAMID':'<g stroke="#0b3550" stroke-width="3" fill="#ffd98a">'+
+     '<polygon points="100,20 152,104 48,104"/><polygon points="100,20 152,104 118,118 66,104" fill="#f0b13f"/></g>'
+  };
+  return figWrap(g[nm]||g['CUBE']);
+}
+
 const SOLIDS=[
  {nm:'CUBE',f:6,e:12,v:8},{nm:'SPHERE',f:1,e:0,v:0},{nm:'CYLINDER',f:3,e:2,v:0},
  {nm:'CONE',f:2,e:1,v:1},{nm:'SQUARE PYRAMID',f:5,e:8,v:5}
@@ -4554,27 +4713,27 @@ function qGeo(t){
   if(t==='hard'){
     const k=ri(1,4);
     if(k===1){const s=pick(SHAPES);return mc('What shape is this?',s.nm,shuf(SHAPES.filter(x=>x.nm!==s.nm).map(x=>x.nm)),'It has '+s.n+' sides.',shapeSVG(s.n,'#a56bff'));}
-    if(k===2){const a=ri(3,12);return mc('A square has sides of '+a+' cm. What is the distance all the way around?',a*4,near(a*4,9),'Add all 4 sides: '+a+'+'+a+'+'+a+'+'+a+'.');}
-    if(k===3){const s=pick(SOLIDS);return mc('How many FLAT FACES does a '+s.nm.toLowerCase()+' have?',s.f,near(s.f,3),'Count every flat surface.');}
-    return mc('Which one is a 3D solid, not a flat shape?','CUBE',['SQUARE','TRIANGLE','CIRCLE'],'A cube is solid — you can hold it.');
+    if(k===2){const a=ri(3,12);return mc('A square has sides of '+a+' cm. What is the distance all the way around?',a*4,near(a*4,9),'Add all 4 sides: '+a+'+'+a+'+'+a+'+'+a+'.',squareFig(a));}
+    if(k===3){const s=pick(SOLIDS);return mc('How many FLAT FACES does a '+s.nm.toLowerCase()+' have?',s.f,near(s.f,3),'Count every flat surface.',solidFig(s.nm));}
+    return mc('Which one is a 3D solid, not a flat shape?','CUBE',['SQUARE','TRIANGLE','CIRCLE'],'A cube is solid — you can hold it.',solidFig('CUBE'));
   }
   if(t==='g3'){
     const k=ri(1,8);
-    if(k===1){const a=ri(6,15),b=ri(4,13);return mc('A rectangle is '+a+' cm by '+b+' cm. AREA?',a*b,near(a*b,19),'Area = length × width.');}
-    if(k===2){const a=ri(5,16);return mc('A square has an area of '+(a*a)+' cm². How long is one side?',a,near(a,5),'What number times itself makes '+(a*a)+'?');}
-    if(k===3){return mc('How many lines of symmetry does a SQUARE have?',4,[2,1,8],'Two through the middles and two through the corners.');}
-    if(k===4){return mc('A quadrilateral with 4 equal sides but no right angles is a...','RHOMBUS',['SQUARE','TRAPEZOID','PENTAGON'],'A rhombus is a pushed-over square.');}
-    if(k===5){return mc('How many VERTICES (corners) does a cube have?',8,[6,12,4],'A cube has 8 corners, 12 edges and 6 faces.');}
-    if(k===6){return mc('An angle bigger than a right angle but less than a straight line is...','OBTUSE',['ACUTE','RIGHT','REFLEX'],'Between 90° and 180° is obtuse.');}
-    if(k===7){return mc('How many degrees are in a straight line?',180,[90,360,120],'A straight angle is two right angles: 90 + 90.');}
-    return mc('Which solid has exactly 5 faces, 8 edges and 5 vertices?','SQUARE PYRAMID',['CUBE','CYLINDER','CONE'],'A square base plus 4 triangles.');
+    if(k===1){const a=ri(6,15),b=ri(4,13);return mc('A rectangle is '+a+' cm by '+b+' cm. AREA?',a*b,near(a*b,19),'Area = length × width.',rectFig(a,b));}
+    if(k===2){const a=ri(5,16);return mc('A square has an area of '+(a*a)+' cm². How long is one side?',a,near(a,5),'What number times itself makes '+(a*a)+'?',squareFig('?'));}
+    if(k===3){return mc('How many lines of symmetry does a SQUARE have?',4,[2,1,8],'Two through the middles and two through the corners.',squareFig(''));}
+    if(k===4){return mc('4 equal sides, but no square corners. What is this shape?','RHOMBUS',['SQUARE','TRAPEZOID','PENTAGON'],'A rhombus is a pushed-over square.',rhombusFig());}
+    if(k===5){return mc('How many VERTICES (corners) does a cube have?',8,[6,12,4],'A cube has 8 corners, 12 edges and 6 faces.',solidFig('CUBE'));}
+    if(k===6){return mc('What is this angle called?','OBTUSE',['ACUTE','RIGHT','REFLEX'],'Between 90° and 180° is obtuse.',angleFig(133));}
+    if(k===7){return mc('How many degrees are in a straight line?',180,[90,360,120],'A straight angle is two right angles: 90 + 90.',angleFig(180));}
+    return mc('Which solid has exactly 5 faces, 8 edges and 5 vertices?','SQUARE PYRAMID',['CUBE','CYLINDER','CONE'],'A square base plus 4 triangles.',solidFig('SQUARE PYRAMID'));
   }
   const k=ri(1,5);
-  if(k===1){const a=ri(3,12),b=ri(3,12);return mc('A rectangle is '+a+' cm long and '+b+' cm wide. What is its AREA?',a*b,near(a*b,13),'Area = length × width.');}
-  if(k===2){const a=ri(3,14),b=ri(3,14);return mc('A rectangle is '+a+' cm by '+b+' cm. What is its PERIMETER?',2*(a+b),near(2*(a+b),11),'Perimeter = 2 × (length + width).');}
-  if(k===3){return mc('An angle smaller than a right angle is called...','ACUTE',['OBTUSE','STRAIGHT','REFLEX'],'A right angle is 90°. Smaller than that is acute.');}
-  if(k===4){const s=SOLIDS[0];return mc('How many EDGES does a cube have?',12,[8,6,10],'A cube has 12 edges, 8 corners and 6 faces.');}
-  return mc('How many degrees are in a right angle?',90,[45,180,60],'A square corner is 90 degrees.');
+  if(k===1){const a=ri(3,12),b=ri(3,12);return mc('A rectangle is '+a+' cm long and '+b+' cm wide. What is its AREA?',a*b,near(a*b,13),'Area = length × width.',rectFig(a,b));}
+  if(k===2){const a=ri(3,14),b=ri(3,14);return mc('A rectangle is '+a+' cm by '+b+' cm. What is its PERIMETER?',2*(a+b),near(2*(a+b),11),'Perimeter = 2 × (length + width).',rectFig(a,b));}
+  if(k===3){return mc('What is this angle called?','ACUTE',['OBTUSE','STRAIGHT','REFLEX'],'A right angle is 90°. Smaller than that is acute.',angleFig(38));}
+  if(k===4){const s=SOLIDS[0];return mc('How many EDGES does a cube have?',12,[8,6,10],'A cube has 12 edges, 8 corners and 6 faces.',solidFig('CUBE'));}
+  return mc('What is this angle called?','RIGHT',['ACUTE','OBTUSE','STRAIGHT'],'A square corner is a right angle — 90 degrees.',angleFig(90));
 }
 
 /* ---------- SCIENCE (curated, checked) ---------- */
