@@ -28,7 +28,7 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden}
 html{height:100dvh}
-body{height:var(--appvh,100dvh)}
+body{height:var(--appvh,100vh)}
 body{
   background:var(--bg);
   color:var(--ink);
@@ -39,11 +39,11 @@ body{
   -webkit-user-select:none;user-select:none;
 }
 /* ---------- animated GD grid background ---------- */
-#bg{position:fixed;inset:0;z-index:0;overflow:hidden;background:
+#bg{position:fixed;top:0;right:0;bottom:0;left:0;inset:0;z-index:0;overflow:hidden;background:
    radial-gradient(ellipse at 50% 120%, rgba(61,255,119,.16), transparent 60%),
    radial-gradient(ellipse at 20% -10%, rgba(60,224,255,.13), transparent 55%),
    linear-gradient(180deg,#05070d 0%,#0a1020 55%,#05070d 100%);}
-#bg .grid{position:absolute;inset:-50%;
+#bg .grid{position:absolute;top:-50%;right:-50%;bottom:-50%;left:-50%;inset:-50%;
   background-image:linear-gradient(rgba(61,255,119,.10) 1px,transparent 1px),
                    linear-gradient(90deg,rgba(61,255,119,.10) 1px,transparent 1px);
   background-size:46px 46px;
@@ -52,7 +52,7 @@ body{
 @keyframes scroll{to{background-position:0 46px}}
 #bg .glow{position:absolute;left:50%;bottom:-30%;width:120vw;height:60vh;margin-left:-60vw;
   background:radial-gradient(ellipse,rgba(61,255,119,.22),transparent 70%);filter:blur(30px)}
-#bg .stars{position:absolute;inset:0}
+#bg .stars{position:absolute;top:0;right:0;bottom:0;left:0;inset:0}
 #bg .stars i{position:absolute;width:2px;height:2px;background:#fff;border-radius:50%;opacity:.5;animation:tw 3s infinite}
 @keyframes tw{0%,100%{opacity:.15}50%{opacity:.9}}
 body.beat #bg .glow{animation:beatglow var(--beat,.6s) linear infinite}
@@ -61,7 +61,7 @@ body.grey #bg{filter:grayscale(1) brightness(.6)}
 #bg,#bg *{transition:filter .8s ease}
 
 /* ---------- app frame ---------- */
-#app{position:relative;z-index:2;height:var(--appvh,100dvh);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:env(safe-area-inset-top) 10px env(safe-area-inset-bottom);overflow:hidden}
+#app{position:relative;z-index:2;height:var(--appvh,100vh);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:env(safe-area-inset-top) 10px env(safe-area-inset-bottom);overflow:hidden}
 .screen{display:none;width:100%;max-width:820px;flex:1 1 auto;min-height:0;flex-direction:column;justify-content:center;animation:pop .35s ease}
 .screen.on{display:flex}
 @keyframes pop{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
@@ -139,7 +139,7 @@ body.legacy .levels{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
 
 /* ---------- cube sprite ---------- */
 .cube{position:relative;display:inline-block;border-radius:6px;box-shadow:0 0 0 3px rgba(0,0,0,.5) inset,0 6px 16px rgba(0,0,0,.6)}
-.cube .eyes{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:14%}
+.cube .eyes{position:absolute;top:0;right:0;bottom:0;left:0;inset:0;display:flex;align-items:center;justify-content:center;gap:14%}
 .cube .eye{width:16%;height:22%;background:#0b0f16;border-radius:2px}
 .cube .mouth{position:absolute;left:50%;bottom:20%;transform:translateX(-50%);width:36%;height:9%;background:#0b0f16;border-radius:0 0 8px 8px}
 .cube.happy .mouth{height:16%;border-radius:0 0 20px 20px}
@@ -187,7 +187,7 @@ body.legacy .levels{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
 /* ---------- story ---------- */
 .scene{position:relative;border-radius:16px;overflow:hidden;border:2px solid rgba(255,255,255,.14);
   height:clamp(140px,30vh,260px);background:#070c16;flex:0 0 auto}
-.scene svg{position:absolute;inset:0;width:100%;height:100%}
+.scene svg{position:absolute;top:0;right:0;bottom:0;left:0;inset:0;width:100%;height:100%}
 .storytext{font-size:clamp(17px,3.3vmin,23px);line-height:1.65;padding:14px 4px 4px;font-weight:500;animation:fadeUp .45s ease both}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 /* --- scene animation --- */
@@ -212,10 +212,10 @@ body.legacy .levels{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
 /* --- whole-scene moods --- */
 .scene.tremble{animation:tremble .16s steps(2) infinite}
 @keyframes tremble{0%{transform:translate(0,0)}25%{transform:translate(-2px,1px)}50%{transform:translate(2px,-1px)}75%{transform:translate(-1px,-2px)}100%{transform:translate(1px,1px)}}
-.scene.danger::after{content:"";position:absolute;inset:0;pointer-events:none;
+.scene.danger::after{content:"";position:absolute;top:0;right:0;bottom:0;left:0;inset:0;pointer-events:none;
   box-shadow:inset 0 0 70px rgba(255,20,90,.6);animation:dang 1.15s ease-in-out infinite}
 @keyframes dang{0%,100%{opacity:.45}50%{opacity:1}}
-.scene.creep::after{content:"";position:absolute;inset:0;pointer-events:none;
+.scene.creep::after{content:"";position:absolute;top:0;right:0;bottom:0;left:0;inset:0;pointer-events:none;
   background:radial-gradient(ellipse at 50% 55%, transparent 30%, rgba(0,0,0,.75) 100%);animation:dang 3s ease-in-out infinite}
 .scene.rise svg{animation:riseIn .8s cubic-bezier(.2,.9,.3,1) both}
 @keyframes riseIn{from{transform:scale(1.14) translateY(8px);opacity:.4}to{transform:none;opacity:1}}
@@ -255,9 +255,9 @@ body.legacy .levels{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
 
 /* ---------- secret coin ---------- */
 .coinspot{position:absolute;width:34px;height:34px;border-radius:50%;cursor:pointer;z-index:5}
-.coinspot::after{content:"";position:absolute;inset:6px;border-radius:50%;background:transparent}
+.coinspot::after{content:"";position:absolute;top:6px;right:6px;bottom:6px;left:6px;inset:6px;border-radius:50%;background:transparent}
 .coinspot.found::after{background:radial-gradient(circle at 35% 30%,#fff6b0,#f0b400 60%,#8a6200);box-shadow:0 0 18px rgba(255,217,61,.9)}
-.coinburst{position:fixed;inset:0;pointer-events:none;z-index:99}
+.coinburst{position:fixed;top:0;right:0;bottom:0;left:0;inset:0;pointer-events:none;z-index:99}
 
 /* ---------- minigame (GD engine) ---------- */
 .gdwrap{position:relative;width:100%;border-radius:16px;overflow:hidden;border:2px solid rgba(61,255,119,.5);
@@ -268,7 +268,7 @@ body.legacy .levels{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
 .gdbar span{position:absolute;left:0;right:0;top:0;line-height:13px;text-align:center;font-family:var(--pix);font-size:7px;color:#fff;text-shadow:0 0 4px #000}
 .gdatt{position:absolute;right:10px;top:26px;font-family:var(--pix);font-size:9px;color:#fff;text-shadow:0 0 8px #000}
 .gdbest{position:absolute;left:10px;top:26px;font-family:var(--pix);font-size:9px;color:var(--yellow);text-shadow:0 0 8px #000}
-.gdmsg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;
+.gdmsg{position:absolute;top:0;right:0;bottom:0;left:0;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;
   font-family:var(--pix);font-size:clamp(10px,2.3vmin,14px);color:#fff;background:rgba(0,0,0,.72);text-align:center;padding:16px;line-height:1.9}
 .gdmsg .sub{font-size:.78em;color:var(--cyan)}
 .gdshake{animation:gdshake .28s}
@@ -279,7 +279,7 @@ body.legacy .levels{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
   background:linear-gradient(180deg,#ff6b6b,#c81e1e)!important;box-shadow:0 6px 0 #7a0c0c,0 0 30px rgba(255,80,80,.6)!important;color:#fff!important;
   animation:shake 2.4s ease-in-out infinite}
 @keyframes shake{0%,92%,100%{transform:none}94%{transform:translateX(-3px) rotate(-1deg)}96%{transform:translateX(3px) rotate(1deg)}98%{transform:translateX(-2px)}}
-.hahas{position:fixed;inset:0;pointer-events:none;z-index:98;overflow:hidden}
+.hahas{position:fixed;top:0;right:0;bottom:0;left:0;inset:0;pointer-events:none;z-index:98;overflow:hidden}
 .hahas span{position:absolute;font-family:var(--pix);color:var(--yellow);animation:rise 1.4s ease-out forwards;text-shadow:0 0 10px rgba(255,217,61,.8)}
 @keyframes rise{to{transform:translateY(-140px) rotate(20deg);opacity:0}}
 
@@ -312,7 +312,7 @@ body.dev-laptop .palette{grid-template-rows:repeat(2,auto)}
 #colorName{font-family:var(--pix);font-size:8.5px;color:var(--cyan);text-align:center;line-height:1.9;min-height:1.9em}
 .swatch{flex:0 0 auto;width:46px;height:46px;border-radius:14px;border:3px solid rgba(255,255,255,.3);position:relative;cursor:pointer}
 .swatch.on{border-color:#fff;transform:scale(1.08);box-shadow:0 0 16px rgba(255,255,255,.6)}
-.swatch b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--pix);font-size:13px;color:#000;text-shadow:0 1px 0 rgba(255,255,255,.7)}
+.swatch b{position:absolute;top:0;right:0;bottom:0;left:0;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--pix);font-size:13px;color:#000;text-shadow:0 1px 0 rgba(255,255,255,.7)}
 
 /* ---------- moderator ---------- */
 .modwrap label{display:block;font-family:var(--pix);font-size:9px;color:var(--cyan);margin:12px 0 5px}
@@ -338,7 +338,7 @@ body.dev-laptop .palette{grid-template-rows:repeat(2,auto)}
 .rdock .mission{font-family:var(--pix);font-size:8.5px;color:var(--yellow);text-align:center;line-height:2;margin-top:4px}
 .rdock .mission b{color:#fff}
 .rdock .stage{display:flex;justify-content:center;padding:6px 0 2px}
-.rdock svg{width:100%;max-width:150px;height:auto;overflow:visible}
+.rdock svg{display:block;margin:0 auto;max-width:100%;overflow:visible}
 .rk-float{animation:rkfloat 3s ease-in-out infinite}
 @keyframes rkfloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
 .rk-flame{animation:rkflame .16s steps(2) infinite;transform-box:fill-box;transform-origin:top center}
@@ -360,21 +360,22 @@ body.dev-laptop .palette{grid-template-rows:repeat(2,auto)}
 .item.eq{border-color:var(--green);box-shadow:0 0 15px rgba(61,255,119,.28)}
 .item.own{border-color:rgba(61,255,119,.4)}
 .item.lock{filter:grayscale(.75) brightness(.7)}
-.item .thumb{height:52px;display:flex;align-items:center;justify-content:center}
-.item .thumb svg{max-height:52px;width:auto}
+.item .thumb{height:52px;line-height:52px;text-align:center}
+.item .thumb svg{display:inline-block;vertical-align:middle;max-width:100%;pointer-events:none}
+.dest .em,.dest .nm,.dest .pr,.item .nm,.item .pr{pointer-events:none}
 .item .nm{font-family:var(--pix);font-size:8px;margin-top:5px;line-height:1.8}
 .item .pr{font-family:var(--pix);font-size:8px;color:var(--yellow);margin-top:3px}
 .item .pr.free{color:var(--green)}
 .swatchrow{display:flex;gap:8px;flex-wrap:wrap}
 .csw{width:42px;height:42px;border-radius:12px;border:3px solid rgba(255,255,255,.28);position:relative;cursor:pointer}
 .csw.on{border-color:#fff;transform:scale(1.08)}
-.csw.lock::after{content:"\1F512";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:15px}
-#launchfx{position:fixed;inset:0;z-index:140;display:none;background:radial-gradient(ellipse at 50% 120%,#0b2a4a,#01030a 70%);overflow:hidden}
+.csw.lock::after{content:"\1F512";position:absolute;top:0;right:0;bottom:0;left:0;inset:0;display:flex;align-items:center;justify-content:center;font-size:15px}
+#launchfx{position:fixed;top:0;right:0;bottom:0;left:0;inset:0;z-index:140;display:none;background:radial-gradient(ellipse at 50% 120%,#0b2a4a,#01030a 70%);overflow:hidden}
 #launchfx.on{display:block}
-#launchfx canvas{position:absolute;inset:0;width:100%;height:100%}
+#launchfx canvas{position:absolute;top:0;right:0;bottom:0;left:0;inset:0;width:100%;height:100%}
 #launchfx .lrocket{position:absolute;left:50%;bottom:4%;transform:translateX(-50%);width:min(190px,42vw);
   filter:drop-shadow(0 0 22px rgba(255,200,80,.45));z-index:3}
-#launchfx .lflash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:4}
+#launchfx .lflash{position:absolute;top:0;right:0;bottom:0;left:0;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:4}
 #launchfx .lflash.go{animation:lflash .55s ease-out}
 @keyframes lflash{0%{opacity:.95}100%{opacity:0}}
 #launchfx .lsub{position:absolute;left:0;right:0;top:36%;text-align:center;font-family:var(--pix);
@@ -487,7 +488,7 @@ body.dev-laptop .palette{grid-template-rows:repeat(2,auto)}
 .secretcard .cd{font-family:var(--pix);font-size:clamp(12px,3.4vmin,20px);color:#fff;margin:10px 0;letter-spacing:.06em}
 .secretcard .sub{font-size:.85em;opacity:.85}
 
-.cardtable{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:8px;overflow:auto;
+.cardtable{position:absolute;top:0;right:0;bottom:0;left:0;inset:0;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:8px;overflow:auto;
   background:radial-gradient(ellipse at 50% 40%,#12603a,#062015 75%)}
 .cardrow .who{font-family:var(--pix);font-size:8px;color:#cfe8d8;line-height:1.9;text-align:center}
 .cardrow .hand{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;padding:4px 0}
@@ -496,7 +497,7 @@ body.dev-laptop .palette{grid-template-rows:repeat(2,auto)}
 .card2.big{width:clamp(46px,11vmin,74px)}
 .card2 .r{position:absolute;top:2px;left:4px;font-family:monospace;font-weight:700;font-size:clamp(10px,2.3vmin,15px);color:#111}
 .card2 .r2{position:absolute;bottom:2px;right:4px;font-family:monospace;font-weight:700;font-size:clamp(9px,2vmin,13px);color:#111;transform:rotate(180deg)}
-.card2 .s{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:clamp(15px,4vmin,26px);color:#111}
+.card2 .s{position:absolute;top:0;right:0;bottom:0;left:0;inset:0;display:flex;align-items:center;justify-content:center;font-size:clamp(15px,4vmin,26px);color:#111}
 .card2.r .r,.card2.r .r2,.card2.r .s{color:#d81b3a}
 .card2.back{background:repeating-linear-gradient(45deg,#1e56c8 0 6px,#0d2a72 6px 12px);border-color:#0a1e52}
 .card2.empty{background:rgba(255,255,255,.08);border-style:dashed;display:flex;align-items:center;justify-content:center;
@@ -520,8 +521,8 @@ body.dev-laptop .palette{grid-template-rows:repeat(2,auto)}
 .acct{display:flex;gap:12px;align-items:center;border:2px solid rgba(255,255,255,.18);border-radius:18px;
   padding:12px;background:linear-gradient(160deg,rgba(16,26,46,.95),rgba(6,10,20,.95));margin-bottom:11px;position:relative}
 .acct.mine{box-shadow:0 0 22px rgba(61,255,119,.22)}
-.acct .rkt{flex:0 0 auto;width:clamp(52px,13vmin,78px)}
-.acct .rkt svg{width:100%;height:auto}
+.acct .rkt{flex:0 0 auto}
+.acct .rkt svg{display:block;max-width:100%}
 .acct .info{flex:1;min-width:0}
 .acct .nm{font-family:var(--pix);font-size:clamp(9px,2vmin,12px);line-height:1.9;display:flex;align-items:center;gap:6px}
 .acct .lockicon{font-size:.8em;opacity:.8}
@@ -568,7 +569,7 @@ body.dev-laptop .palette{grid-template-rows:repeat(2,auto)}
   background:rgba(4,10,6,.96);border:2px solid var(--green);border-radius:14px;padding:12px 18px;
   font-family:var(--pix);font-size:10px;color:var(--green);transition:transform .35s;max-width:88vw;text-align:center;line-height:1.9}
 #toast.on{transform:translateX(-50%) translateY(0)}
-#modal{position:fixed;inset:0;z-index:130;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.78);padding:16px}
+#modal{position:fixed;top:0;right:0;bottom:0;left:0;inset:0;z-index:130;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.78);padding:16px}
 #modal.on{display:flex}
 #modal .card{max-width:520px;width:100%;max-height:86vh;overflow:auto;-webkit-overflow-scrolling:touch}
 .badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,217,61,.16);border:2px solid var(--yellow);
@@ -962,7 +963,7 @@ function renderHome(){
   PROF.list.forEach(p=>{
     const st=loadOf(p.id)||{};
     const pct=progressPct(st);
-    const rk=st.rocket?rocketSVG(st.rocket,{noFlame:false}):rocketSVG(freshRocket(),{noFlame:false});
+    const rk=st.rocket?rocketSVG(st.rocket,{noFlame:false,w:66}):rocketSVG(freshRocket(),{noFlame:false,w:66});
     h+='<div class="acct '+(p.id===PROF.active?'mine':'')+'" style="border-color:'+p.color+'55">'+
        '<div class="rkt">'+rk+'</div>'+
        '<div class="info"><div class="nm" style="color:'+p.color+'">'+p.emoji+' '+esc(p.name)+
@@ -3867,8 +3868,8 @@ function boardHTML(){
   let h='';
   rows.forEach((r,i)=>{
     let rk;
-    try{ rk=rocketSVG((r.look&&r.look.rocket)||freshRocket(),{noFlame:false}); }
-    catch(e){ rk=rocketSVG(freshRocket(),{noFlame:false}); }
+    try{ rk=rocketSVG((r.look&&r.look.rocket)||freshRocket(),{noFlame:false,w:66}); }
+    catch(e){ rk=rocketSVG(freshRocket(),{noFlame:false,w:66}); }
     const me2=(r.id===mine);
     const localHere=PROF.list.some(x=>x.cloud&&x.cloud.id===r.id);
     h+='<div class="acct '+(me2?'mine':'')+'" style="border-color:'+(i===0?'#ffd93d55':'rgba(255,255,255,.18)')+'">'+
@@ -4249,8 +4250,8 @@ function startArcade(g){
 /* ---------------- 0. RISE UP — fly the rocket he built ---------------- */
 function rocketImage(cb){
   try{
-    let svg=rocketSVG(R(),{tall:true});
-    svg=svg.replace('<svg ','<svg xmlns="http://www.w3.org/2000/svg" width="200" height="390" ');
+    let svg=rocketSVG(R(),{tall:true,w:200});
+    svg=svg.replace('<svg ','<svg xmlns="http://www.w3.org/2000/svg" ');
     const img=new Image();
     img.onload=()=>cb(img); img.onerror=()=>cb(null);
     img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
@@ -5422,12 +5423,19 @@ function rocketSVG(r,opt){
       '<feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>'+
     '</defs>';
   const shade='<rect x="'+(100-hx)+'" y="110" width="'+bw+'" height="140" rx="7" fill="url(#g'+uid+')" pointer-events="none"/>';
-  return '<svg viewBox="0 0 200 '+(opt.tall?390:360)+'" preserveAspectRatio="xMidYMid meet">'+defs+
+  /* Older handheld browsers cannot work out an SVG's size from the viewBox alone —
+     they render an empty box. Always ship real width/height attributes. */
+  const vh=(opt.tall?390:360);
+  const svgH=opt.h?opt.h:(opt.w?Math.round(opt.w*vh/200):vh);
+  const svgW=opt.w?opt.w:Math.round(svgH*200/vh);
+  return '<svg viewBox="0 0 200 '+vh+'" width="'+svgW+'" height="'+svgH+'" preserveAspectRatio="xMidYMid meet">'+defs+
     '<g transform="translate(100,200) scale('+k.toFixed(2)+') translate(-100,-200)">'+g+deco+shade+'</g></svg>';
 }
-function partThumb(cat,id){
+function partThumb(cat,id,px){
   const r=R(), tmp=JSON.parse(JSON.stringify(r)); tmp.eq[cat]=id; tmp.size='m';
-  return '<svg viewBox="0 0 200 360" preserveAspectRatio="xMidYMid meet">'+rocketSVG(tmp,{noFlame:cat!=='flame'}).replace(/^<svg[^>]*>/,'').replace(/<\/svg>$/,'')+'</svg>';
+  const H=px||52, W=Math.round(H*200/360);
+  return '<svg viewBox="0 0 200 360" width="'+W+'" height="'+H+'" preserveAspectRatio="xMidYMid meet">'+
+    rocketSVG(tmp,{noFlame:cat!=='flame'}).replace(/^<svg[^>]*>/,'').replace(/<\/svg>$/,'')+'</svg>';
 }
 
 /* ---------- dock on the map ---------- */
@@ -5452,7 +5460,7 @@ function renderDock(){
   el.innerHTML='<div class="rdock">'+
     '<h4>SEBASTIAN&#39;S ROCKET</h4>'+
     '<div class="mission">MISSION TO<br><b>'+(d?d.em+' '+d.n:'\u{2753} NOWHERE YET')+'</b></div>'+
-    '<div class="stage">'+rocketSVG(r)+'</div>'+
+    '<div class="stage">'+rocketSVG(r,{w:142})+'</div>'+
     '<div class="stat"><span>SIZE</span><span>'+(RSIZES.find(x=>x.id===r.size)||{}).n+'</span></div>'+
     '<div class="stat"><span>MISSIONS</span><span>'+r.missions.length+'</span></div>'+
     '<div style="height:10px"></div><button class="btn cy" id="dockGo" style="width:100%;font-size:9px">\u{1F6E0}\u{FE0F} BUILD IT</button>'+
@@ -5460,7 +5468,7 @@ function renderDock(){
     '</div>';
   const g=$('#dockGo'); if(g)g.addEventListener('click',()=>{renderRocket();show('s-rocket');});
   const l=$('#dockLaunch'); if(l)l.addEventListener('click',()=>doLaunch());
-  el.querySelector('.stage svg').classList.add('rk-float');
+  const fl=el.querySelector('.stage svg'); if(fl)fl.classList.add('rk-float');
 }
 
 /* ---------- workshop ---------- */
@@ -5470,7 +5478,7 @@ function renderRocket(){
   let h='<div class="card" style="text-align:center">'+
     '<div class="pix neon c" style="font-size:10px;line-height:2">SEBASTIAN&#39;S ROCKET</div>'+
     '<div class="pix neon y" style="font-size:9px;line-height:2;margin-top:4px">MISSION TO THE '+(d?d.n:'__________')+'</div>'+
-    '<div style="max-width:190px;margin:6px auto 0" id="rkPreview">'+rocketSVG(r,{tall:true})+'</div>'+
+    '<div style="max-width:190px;margin:6px auto 0" id="rkPreview">'+rocketSVG(r,{tall:true,w:170})+'</div>'+
     '<div class="tiny" style="margin-top:6px">\u{1F7E1} '+S.coins+' coins to spend</div></div>';
   h+='<div style="height:12px"></div><div class="shoptabs">'+
     [['dest','\u{1F30D} MISSION'],['nose','\u{1F53A} NOSE'],['body','\u{1F6E2}\u{FE0F} BODY'],['wings','\u{1FA82} FINS'],
@@ -5505,7 +5513,7 @@ function renderRocket(){
       const has=r.sizes.indexOf(x.id)>=0;
       const tmp=JSON.parse(JSON.stringify(r)); tmp.size=x.id;
       return '<div class="item '+(r.size===x.id?'eq':(has?'own':''))+'" data-size="'+x.id+'" data-p="'+x.p+'">'+
-        '<div class="thumb">'+rocketSVG(tmp,{noFlame:true})+'</div><div class="nm">'+x.n+'</div>'+
+        '<div class="thumb">'+rocketSVG(tmp,{noFlame:true,h:52})+'</div><div class="nm">'+x.n+'</div>'+
         '<div class="pr '+(x.p?'':'free')+'">'+(r.size===x.id?'ON':(has?'OWNED':x.p+' \u{1F7E1}'))+'</div></div>';}).join('')+'</div>';
   }
   else {
@@ -5520,20 +5528,20 @@ function renderRocket(){
   b.innerHTML=h;
 
   b.querySelectorAll('[data-tab]').forEach(t=>t.addEventListener('click',()=>{RTAB=t.dataset.tab;beep(800,.05);renderRocket();}));
-  const refresh=()=>{ $('#rkPreview').innerHTML=rocketSVG(R(),{tall:true}); hud(); };
+  const refresh=()=>{ const pv=$('#rkPreview'); if(pv)pv.innerHTML=rocketSVG(R(),{tall:true,w:170}); hud(); };
 
   b.querySelectorAll('[data-cat]').forEach(el=>el.addEventListener('click',()=>{
     const cat=el.dataset.cat,id=el.dataset.id,pr=+el.dataset.p,bd=el.dataset.badge;
     const item=(RPARTS[cat]||[]).find(x=>x.id===id)||{n:id};
     if(bd&&!hasBadge(bd)){toast('LOCKED \u{1F512}<br>YOU NEED THE<br>'+bd.toUpperCase()+' BADGE',2600);return;}
     if(owns(cat,id)){ beep(950,.08); R().eq[cat]=id; save(); renderRocket(); return; }
-    confirmBuy(item.n, pr, partThumb(cat,id), ()=>{ S.coins-=pr; R().owned[cat+':'+id]=1; R().eq[cat]=id; save(); renderRocket(); });
+    confirmBuy(item.n, pr, partThumb(cat,id,150), ()=>{ S.coins-=pr; R().owned[cat+':'+id]=1; R().eq[cat]=id; save(); renderRocket(); });
   }));
   b.querySelectorAll('[data-size]').forEach(el=>el.addEventListener('click',()=>{
     const id=el.dataset.size,pr=+el.dataset.p,r2=R(),sz=RSIZES.find(x=>x.id===id);
     if(r2.sizes.indexOf(id)>=0){ beep(950,.08); r2.size=id; save(); renderRocket(); return; }
     const tmp=JSON.parse(JSON.stringify(r2)); tmp.size=id;
-    confirmBuy('A '+sz.n+' ROCKET', pr, rocketSVG(tmp,{noFlame:true}), ()=>{
+    confirmBuy('A '+sz.n+' ROCKET', pr, rocketSVG(tmp,{noFlame:true,w:100}), ()=>{
       S.coins-=pr;r2.sizes.push(id);r2.size=id;save();addBadge('bigrocket','ROCKET ENGINEER');renderRocket(); });
   }));
   b.querySelectorAll('[data-c1],[data-c2]').forEach(el=>el.addEventListener('click',()=>{
@@ -5573,7 +5581,7 @@ function doLaunch(){
   const r=R(), d=destOf(); if(!d)return;
   const fx=$('#launchfx');
   fx.innerHTML='<canvas id="lcv"></canvas>'+
-    '<div class="lrocket" id="lrk">'+rocketSVG(r,{tall:true})+'</div>'+
+    '<div class="lrocket" id="lrk">'+rocketSVG(r,{tall:true,w:190})+'</div>'+
     '<div class="lflash" id="lflash"></div>'+
     '<div class="cap" id="lcap"></div>'+
     '<div class="lsub" id="lsub"></div>'+
